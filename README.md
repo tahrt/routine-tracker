@@ -19,6 +19,7 @@ npm run icons    # regenerate PWA icons (only after changing the mark)
 - **Today** — the weekday's checklist, tap to complete, live total % and core %.
 - **Week** — Mon–Sun skyline. Past days are tappable so a forgotten day can be logged; future days are inert; Next stops at the current week.
 - **Day status** — `active` / `rest` / `skipped`. Rest days are excluded from the week average, so a holiday doesn't read as a collapse.
+- **Edit tasks** — add, rename, retime, reorder, delete and flag tasks as core for any weekday. Edits apply from today on; days already logged keep the list they were logged with, with an opt-in "update this day" prompt.
 - **Settings** — export/import JSON backups, home timezone, day cutoff hour, raw-data viewer, reset.
 - **Offline** — installable PWA, opens and works with no network.
 
@@ -36,9 +37,9 @@ npm run icons    # regenerate PWA icons (only after changing the mark)
 
 ## Deferred (spec §11)
 
-v1.1 streaks · daily note · task weights UI. v1.2 template editing in-app · ad-hoc tasks · history trends. v2.0 Supabase sync + push reminders.
+v1.1 streaks · daily note · task weights UI. v1.2 ad-hoc "just for today" tasks · history trends. v2.0 Supabase sync + push reminders.
 
-Until template editing ships, the weekday routine is seeded from `src/config/schedule.ts` on first run. Changing that file does **not** change an existing install — edit, then either reset from Settings (export first) or import an edited backup.
+`src/config/schedule.ts` only seeds the templates on first run; after that they live in storage and are edited in the app.
 
 ## Deploying
 

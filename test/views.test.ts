@@ -15,7 +15,7 @@ const TODAY = '2026-08-24'; // Monday
 
 describe('renderDay', () => {
   it('shows the weekday type and tasks with no record yet', () => {
-    const html = renderDay({ dateKey: TODAY, todayKey: TODAY, record: undefined, templates: TEMPLATES, standalone: false });
+    const html = renderDay({ dateKey: TODAY, todayKey: TODAY, record: undefined, templates: TEMPLATES, standalone: false, outOfSync: false });
     expect(html).toContain('WFH · Gym AM');
     expect(html).toContain('Monday, 24 Aug 2026');
     expect(html).toContain('Gym');
@@ -26,32 +26,32 @@ describe('renderDay', () => {
   it('reflects completion in the meter', () => {
     const rec = materializeDay(TODAY, TEMPLATES, NOW, TODAY);
     const done = { ...rec, tasks: rec.tasks.map((t) => ({ ...t, done: true })) };
-    expect(renderDay({ dateKey: TODAY, todayKey: TODAY, record: done, templates: TEMPLATES, standalone: false }))
+    expect(renderDay({ dateKey: TODAY, todayKey: TODAY, record: done, templates: TEMPLATES, standalone: false, outOfSync: false }))
       .toContain('100<span class="meter__pct">%</span>');
   });
 
   it('disables tasks and explains the exclusion on a rest day', () => {
     const rec = { ...materializeDay(TODAY, TEMPLATES, NOW, TODAY), status: 'rest' as const };
-    const html = renderDay({ dateKey: TODAY, todayKey: TODAY, record: rec, templates: TEMPLATES, standalone: false });
+    const html = renderDay({ dateKey: TODAY, todayKey: TODAY, record: rec, templates: TEMPLATES, standalone: false, outOfSync: false });
     expect(html).toContain('excluded from the week average');
     expect(html).toContain('disabled');
   });
 
   it('refuses to render a checklist for a future day', () => {
-    const html = renderDay({ dateKey: '2026-08-30', todayKey: TODAY, record: undefined, templates: TEMPLATES, standalone: false });
+    const html = renderDay({ dateKey: '2026-08-30', todayKey: TODAY, record: undefined, templates: TEMPLATES, standalone: false, outOfSync: false });
     expect(html).toContain("hasn't happened yet");
     expect(html).not.toContain('toggle-task');
   });
 
   it('offers a way back when opened from the week view', () => {
-    const html = renderDay({ dateKey: '2026-08-20', todayKey: TODAY, record: undefined, templates: TEMPLATES, standalone: true });
+    const html = renderDay({ dateKey: '2026-08-20', todayKey: TODAY, record: undefined, templates: TEMPLATES, standalone: true, outOfSync: false });
     expect(html).toContain('data-action="back"');
   });
 
   it('escapes task names rather than injecting markup', () => {
     const rec = materializeDay(TODAY, TEMPLATES, NOW, TODAY);
     const evil = { ...rec, tasks: [{ ...rec.tasks[0]!, name: '<img src=x onerror=alert(1)>' }] };
-    const html = renderDay({ dateKey: TODAY, todayKey: TODAY, record: evil, templates: TEMPLATES, standalone: false });
+    const html = renderDay({ dateKey: TODAY, todayKey: TODAY, record: evil, templates: TEMPLATES, standalone: false, outOfSync: false });
     expect(html).not.toContain('<img src=x');
     expect(html).toContain('&lt;img src=x');
   });

@@ -725,3 +725,107 @@ button {
   border-color: var(--danger);
   color: var(--danger);
 }
+
+/* --------------------------------------------------------- template editor */
+
+.day__titlerow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.day__titlerow .btn {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.hint--tight {
+  margin: 10px 0 0;
+}
+
+.edit-tasks {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.edit-task {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edit-task__row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.edit-task__row--foot {
+  justify-content: space-between;
+}
+
+.edit-task__name {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 15px;
+}
+
+.edit-task__time {
+  flex: 1;
+  min-width: 0;
+}
+
+.edit-task__habit {
+  flex: 0 0 42%;
+  font-family: var(--font-body);
+  font-size: 13px;
+  /* Keep the native select from rendering as an unreadable light control. */
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 19px, calc(100% - 11px) 19px;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 30px;
+}
+
+.edit-task__order {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.edit-task .chip {
+  flex: 0 0 auto;
+  padding: 0 14px;
+}
+
+.iconbtn {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.iconbtn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.row--spread {
+  justify-content: space-between;
+  margin-bottom: 8px;
+}

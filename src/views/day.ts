@@ -56,9 +56,11 @@ export interface DayViewProps {
   templates: readonly TemplateVersion[];
   /** True when opened from the Week view rather than being the Today tab. */
   standalone: boolean;
+  /** The record predates a template edit and can be re-synced (spec §4.5). */
+  outOfSync: boolean;
 }
 
-export const renderDay = ({ dateKey, todayKey, record, templates, standalone }: DayViewProps): string => {
+export const renderDay = ({ dateKey, todayKey, record, templates, standalone, outOfSync }: DayViewProps): string => {
   const date = parseKey(dateKey);
   const future = isFutureKey(dateKey, todayKey);
   const preview = record ? null : previewTasks(dateKey, templates);
@@ -74,7 +76,10 @@ export const renderDay = ({ dateKey, todayKey, record, templates, standalone }: 
       <header class="day__head">
         ${standalone ? '<button class="linkback" type="button" data-action="back">← Week</button>' : ''}
         <p class="day__date">${esc(formatLong(date))}${dateKey === todayKey ? ' <span class="tag">today</span>' : ''}</p>
-        <h1 class="day__type">${esc(dayType || 'No tasks scheduled')}</h1>
+        <div class="day__titlerow">
+          <h1 class="day__type">${esc(dayType || 'No tasks scheduled')}</h1>
+          ${future ? '' : '<button class="btn btn--tiny" type="button" data-action="edit-template">Edit tasks</button>'}
+        </div>
         ${record?.editedRetroactively ? '<p class="day__retro" title="First logged on a later day">logged later</p>' : ''}
       </header>
 
@@ -82,6 +87,17 @@ export const renderDay = ({ dateKey, todayKey, record, templates, standalone }: 
         future
           ? `<p class="empty">This day hasn't happened yet.</p>`
           : `
+        ${
+          outOfSync
+            ? `<div class="confirm">
+                 <p class="confirm__text">You changed this weekday's tasks after logging this day. It still shows the old list.</p>
+                 <div class="row">
+                   <button class="btn btn--primary btn--tiny" type="button" data-action="sync-template">Update this day</button>
+                   <button class="btn btn--tiny" type="button" data-action="sync-dismiss">Keep as logged</button>
+                 </div>
+               </div>`
+            : ''
+        }
         ${isRest ? '<p class="restnote">Rest day — excluded from the week average.</p>' : meter(total, core, hasCoreTasks(tasks))}
         ${statusChips(status)}
         ${

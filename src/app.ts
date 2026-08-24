@@ -6,12 +6,13 @@
  */
 
 import { addDays, dateKey, isFutureKey, parseKey, todayKey as computeTodayKey, weekKeys } from './lib/date';
-import { materializeDay } from './lib/day';
+import { currentTemplate, isOutOfSync, materializeDay, newTaskId, syncRecordToTemplate } from './lib/day';
 import { toggleTask } from './lib/stats';
 import { getStore, storageIsEphemeral } from './store';
-import type { DayRecord, DayStatus } from './types';
+import type { DayRecord, DayStatus, DayTemplate } from './types';
 import { toast } from './ui/dom';
 import { renderDay } from './views/day';
+import { renderEditTemplate } from './views/editTemplate';
 import { renderSettings, type PendingImport } from './views/settings';
 import { renderWeek } from './views/week';
 
@@ -27,6 +28,10 @@ interface AppState {
   resetArmed: boolean;
   pendingImport: (PendingImport & { raw: unknown }) | null;
   nudgeDismissed: boolean;
+  /** Open template editor: which weekday, and the unsaved draft of its tasks. */
+  editing: { weekday: number; draft: DayTemplate } | null;
+  /** Dates where the user chose to keep the old task list after a template edit. */
+  syncDismissed: Set<string>;
 }
 
 export const startApp = (): (() => void) => {
@@ -48,6 +53,8 @@ export const startApp = (): (() => void) => {
     resetArmed: false,
     pendingImport: null,
     nudgeDismissed: false,
+    editing: null,
+    syncDismissed: new Set<string>(),
   };
 
   /* ------------------------------------------------------------------ records */
@@ -102,14 +109,21 @@ export const startApp = (): (() => void) => {
     const templates = store.getTemplates();
 
     let body: string;
-    if (state.tab === 'today' || state.openDay) {
+    if (state.editing) {
+      body = renderEditTemplate(state.editing);
+    } else if (state.tab === 'today' || state.openDay) {
       const dateK = state.openDay ?? t;
+      const record = store.getDay(dateK);
       body = renderDay({
         dateKey: dateK,
         todayKey: t,
-        record: store.getDay(dateK),
+        record,
         templates,
         standalone: state.openDay !== null,
+        outOfSync:
+          record !== undefined &&
+          !state.syncDismissed.has(dateK) &&
+          isOutOfSync(record, currentTemplate(templates, t)),
       });
     } else if (state.tab === 'week') {
       body = renderWeek({ anchorKey: state.weekAnchor, todayKey: t, records: recordsFor(weekKeys(parseKey(state.weekAnchor))) });
@@ -127,7 +141,7 @@ export const startApp = (): (() => void) => {
     }
 
     const nudge =
-      state.tab === 'today' && !state.openDay && shouldNudgeBackup()
+      state.tab === 'today' && !state.openDay && !state.editing && shouldNudgeBackup()
         ? `<div class="nudge">
              <span>Back up your history — it only lives in this browser.</span>
              <button class="btn btn--tiny" type="button" data-action="goto-backup">Export</button>
@@ -143,6 +157,7 @@ export const startApp = (): (() => void) => {
   const openTab = (tab: Tab): void => {
     state.tab = tab;
     state.openDay = null;
+    state.editing = null;
     if (tab === 'week') state.weekAnchor = today();
     render();
   };
@@ -214,6 +229,97 @@ export const startApp = (): (() => void) => {
       // Never navigate past the current real week.
       if (delta > 0 && next > today()) return;
       state.weekAnchor = next;
+      render();
+    },
+
+
+    /* ------------------------------------------------------- template editing */
+
+    'edit-template': () => {
+      const dateK = state.openDay ?? today();
+      const weekday = parseKey(dateK).getDay();
+      const tpl = currentTemplate(store.getTemplates(), today());
+      const day = tpl.days[weekday];
+      // Deep copy: the draft is discarded wholesale on cancel.
+      state.editing = {
+        weekday,
+        draft: { type: day?.type ?? '', tasks: (day?.tasks ?? []).map((t) => ({ ...t })) },
+      };
+      render();
+    },
+
+    'edit-cancel': () => {
+      state.editing = null;
+      render();
+    },
+
+    'task-add': () => {
+      if (!state.editing) return;
+      state.editing.draft.tasks.push({ id: newTaskId(), name: '', time: '', core: false, habit: null, weight: 1 });
+      render();
+      // Put the cursor straight into the new row.
+      const inputs = document.querySelectorAll<HTMLInputElement>('[data-action="edit-name"]');
+      inputs[inputs.length - 1]?.focus();
+    },
+
+    'task-delete': (el) => {
+      if (!state.editing) return;
+      const i = Number(el.dataset.index);
+      state.editing.draft.tasks.splice(i, 1);
+      render();
+    },
+
+    'task-move': (el) => {
+      if (!state.editing) return;
+      const i = Number(el.dataset.index);
+      const to = i + Number(el.dataset.dir);
+      const tasks = state.editing.draft.tasks;
+      if (to < 0 || to >= tasks.length) return;
+      const [moved] = tasks.splice(i, 1);
+      if (moved) tasks.splice(to, 0, moved);
+      render();
+    },
+
+    'task-core': (el) => {
+      if (!state.editing) return;
+      const task = state.editing.draft.tasks[Number(el.dataset.index)];
+      if (task) task.core = !task.core;
+      render();
+    },
+
+    'edit-save': () => {
+      const editing = state.editing;
+      if (!editing) return;
+      const tasks = editing.draft.tasks.map((t) => ({ ...t, name: t.name.trim(), time: t.time.trim() }));
+      if (tasks.some((t) => t.name === '')) {
+        toast('Every task needs a name.', 'error');
+        return;
+      }
+      const t = today();
+      const base = currentTemplate(store.getTemplates(), t);
+      // A new version, so days already logged keep the tasks they were logged with.
+      store.appendTemplate({
+        effectiveFrom: t,
+        createdAt: nowIso(),
+        days: { ...structuredClone(base.days), [editing.weekday]: { type: editing.draft.type.trim(), tasks } },
+      });
+      state.editing = null;
+      state.syncDismissed.clear();
+      toast('Saved. Applies from today on.');
+      render();
+    },
+
+    'sync-template': () => {
+      const dateK = state.openDay ?? today();
+      const rec = store.getDay(dateK);
+      if (!rec) return;
+      store.setDay(dateK, syncRecordToTemplate(rec, currentTemplate(store.getTemplates(), today())), nowIso());
+      toast('Day updated to the new task list.');
+      render();
+    },
+
+    'sync-dismiss': () => {
+      state.syncDismissed.add(state.openDay ?? today());
       render();
     },
 
@@ -298,8 +404,28 @@ export const startApp = (): (() => void) => {
     handler(el);
   };
 
+  /** Draft text edits write straight into state; re-rendering here would steal focus. */
+  const onInput = (ev: Event): void => {
+    const el = ev.target;
+    if (!state.editing) return;
+    if (el instanceof HTMLInputElement && el.dataset.action === 'edit-type') {
+      state.editing.draft.type = el.value;
+      return;
+    }
+    if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLSelectElement)) return;
+    const task = state.editing.draft.tasks[Number(el.dataset.index)];
+    if (!task) return;
+    if (el.dataset.action === 'edit-name') task.name = el.value;
+    if (el.dataset.action === 'edit-time') task.time = el.value;
+    if (el.dataset.action === 'edit-habit') task.habit = el.value === '' ? null : el.value;
+  };
+
   const onChange = (ev: Event): void => {
     const el = ev.target as HTMLElement | null;
+    if (el instanceof HTMLSelectElement && el.dataset.action === 'edit-habit') {
+      onInput(ev);
+      return;
+    }
     if (el instanceof HTMLInputElement && el.id === 'import-file') {
       const file = el.files?.[0];
       el.value = '';
@@ -353,6 +479,7 @@ export const startApp = (): (() => void) => {
   };
 
   document.addEventListener('click', onClick);
+  document.addEventListener('input', onInput);
   document.addEventListener('change', onChange);
   document.addEventListener('visibilitychange', onVisibility);
   window.addEventListener('storage', onStorage);
@@ -362,6 +489,7 @@ export const startApp = (): (() => void) => {
 
   return () => {
     document.removeEventListener('click', onClick);
+    document.removeEventListener('input', onInput);
     document.removeEventListener('change', onChange);
     document.removeEventListener('visibilitychange', onVisibility);
     window.removeEventListener('storage', onStorage);

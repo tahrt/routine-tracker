@@ -27,20 +27,20 @@ const boot = (): void => {
   dispose = startApp();
 };
 
+afterEach(() => {
+  dispose?.();
+  dispose = null;
+  vi.useRealTimers();
+});
+
+beforeEach(() => {
+  window.localStorage.clear();
+  // Freeze the clock: Monday 24 Aug 2026, 09:00 Bangkok.
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-08-24T02:00:00.000Z'));
+});
+
 describe('app', () => {
-  afterEach(() => {
-    dispose?.();
-    dispose = null;
-    vi.useRealTimers();
-  });
-
-  beforeEach(() => {
-    window.localStorage.clear();
-    // Freeze the clock: Monday 24 Aug 2026, 09:00 Bangkok.
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-08-24T02:00:00.000Z'));
-  });
-
   it('renders today with the seeded template and a tab bar', () => {
     boot();
     expect(app().textContent).toContain('WFH · Gym AM');
@@ -161,5 +161,160 @@ describe('app', () => {
     click(app().querySelector('[data-action="toggle-task"][data-id="pin"]'));
     expect(window.localStorage.getItem('rt:day:2026-08-26')).not.toBeNull();
     expect(window.localStorage.getItem('rt:day:2026-08-27')).toBeNull();
+  });
+});
+
+describe('template editing', () => {
+  const openEditor = (): void => {
+    click(app().querySelector('[data-action="edit-template"]'));
+  };
+  const setField = (action: string, index: number | null, value: string): void => {
+    const sel = index === null ? `[data-action="${action}"]` : `[data-action="${action}"][data-index="${index}"]`;
+    const el = app().querySelector(sel) as HTMLInputElement | HTMLSelectElement;
+    expect(el, `field ${sel} should exist`).not.toBeNull();
+    el.value = value;
+    el.dispatchEvent(new Event(el instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }));
+  };
+  const names = (): string[] =>
+    [...app().querySelectorAll<HTMLInputElement>('[data-action="edit-name"]')].map((i) => i.value);
+
+  it('opens the editor for the current weekday, prefilled', () => {
+    boot();
+    openEditor();
+    expect(app().textContent).toContain('Every Monday');
+    expect(names()).toContain('Gym');
+    expect((app().querySelector('[data-action="edit-type"]') as HTMLInputElement).value).toBe('WFH · Gym AM');
+  });
+
+  it('renames a task and applies it to that weekday from today on', () => {
+    boot();
+    openEditor();
+    const gymIndex = names().indexOf('Gym');
+    setField('edit-name', gymIndex, 'Muay Thai');
+    setField('edit-time', gymIndex, '6:00–7:30');
+    click(app().querySelector('[data-action="edit-save"]'));
+
+    expect(app().textContent).toContain('Muay Thai');
+    expect(app().textContent).toContain('6:00–7:30');
+    const templates = JSON.parse(window.localStorage.getItem('rt:templates') as string);
+    expect(templates).toHaveLength(2);
+    expect(templates[1].effectiveFrom).toBe('2026-08-24');
+    expect(templates[1].days['1'].tasks.find((t: { id: string }) => t.id === 'gym').name).toBe('Muay Thai');
+    // Other weekdays are carried over untouched.
+    expect(templates[1].days['2'].tasks.find((t: { id: string }) => t.id === 'content')).toBeDefined();
+  });
+
+  it('adds, reorders and deletes tasks', () => {
+    boot();
+    openEditor();
+    const before = names().length;
+
+    click(app().querySelector('[data-action="task-add"]'));
+    setField('edit-name', before, 'Read');
+    expect(names()).toHaveLength(before + 1);
+
+    click(app().querySelector(`[data-action="task-move"][data-index="${before}"][data-dir="-1"]`));
+    expect(names()[before - 1]).toBe('Read');
+
+    click(app().querySelector('[data-action="task-delete"][data-index="0"]'));
+    expect(names()).toHaveLength(before);
+
+    click(app().querySelector('[data-action="edit-save"]'));
+    expect(app().textContent).toContain('Read');
+    expect(app().textContent).not.toContain('Wake up');
+  });
+
+  it('refuses to save a task with no name', () => {
+    boot();
+    openEditor();
+    click(app().querySelector('[data-action="task-add"]'));
+    click(app().querySelector('[data-action="edit-save"]'));
+    expect(document.getElementById('toast')?.textContent).toContain('needs a name');
+    expect(JSON.parse(window.localStorage.getItem('rt:templates') as string)).toHaveLength(1);
+  });
+
+  it('gives a new task a fresh id rather than reusing a deleted one', () => {
+    boot();
+    openEditor();
+    click(app().querySelector('[data-action="task-delete"][data-index="0"]')); // drop "wake"
+    click(app().querySelector('[data-action="task-add"]'));
+    setField('edit-name', names().length - 1, 'Stretch');
+    click(app().querySelector('[data-action="edit-save"]'));
+
+    const templates = JSON.parse(window.localStorage.getItem('rt:templates') as string);
+    const ids = templates[1].days['1'].tasks.map((t: { id: string }) => t.id);
+    expect(ids).not.toContain('wake');
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('discards the draft on cancel', () => {
+    boot();
+    openEditor();
+    setField('edit-name', 0, 'Nonsense');
+    click(app().querySelector('[data-action="edit-cancel"]'));
+    expect(app().textContent).not.toContain('Nonsense');
+    expect(JSON.parse(window.localStorage.getItem('rt:templates') as string)).toHaveLength(1);
+  });
+
+  it('leaves an already-logged day alone and offers to sync it', () => {
+    boot();
+    click(app().querySelector('[data-action="toggle-task"][data-id="gym"]'));
+    openEditor();
+    setField('edit-name', names().indexOf('Gym'), 'Muay Thai');
+    click(app().querySelector('[data-action="task-delete"][data-index="0"]')); // drop "wake"
+    click(app().querySelector('[data-action="edit-save"]'));
+
+    // The logged day keeps its snapshot until the user opts in.
+    const stored = JSON.parse(window.localStorage.getItem('rt:day:2026-08-24') as string);
+    expect(stored.tasks.find((t: { id: string }) => t.id === 'gym').name).toBe('Gym');
+    expect(stored.tasks.some((t: { id: string }) => t.id === 'wake')).toBe(true);
+    expect(app().textContent).toContain('still shows the old list');
+
+    click(app().querySelector('[data-action="sync-template"]'));
+    const synced = JSON.parse(window.localStorage.getItem('rt:day:2026-08-24') as string);
+    expect(synced.tasks.find((t: { id: string }) => t.id === 'gym').name).toBe('Muay Thai');
+    expect(synced.tasks.find((t: { id: string }) => t.id === 'gym').done).toBe(true); // completion kept
+    expect(synced.tasks.some((t: { id: string }) => t.id === 'wake')).toBe(false);
+  });
+
+  it('can keep a day as logged instead of syncing', () => {
+    boot();
+    click(app().querySelector('[data-action="toggle-task"][data-id="gym"]'));
+    openEditor();
+    setField('edit-name', names().indexOf('Gym'), 'Muay Thai');
+    click(app().querySelector('[data-action="edit-save"]'));
+    click(app().querySelector('[data-action="sync-dismiss"]'));
+
+    expect(app().textContent).not.toContain('still shows the old list');
+    expect(app().textContent).toContain('Gym');
+  });
+
+  it('never rewrites a day logged before the edit', () => {
+    boot();
+    // Log last Monday, then change Mondays.
+    click(app().querySelector('[data-action="tab"][data-tab="week"]'));
+    click(app().querySelector('[data-action="week-nav"][data-delta="-1"]'));
+    click(app().querySelector('[data-action="open-day"][data-date="2026-08-17"]'));
+    click(app().querySelector('[data-action="toggle-task"][data-id="gym"]'));
+    click(app().querySelector('[data-action="back"]'));
+    click(app().querySelector('[data-action="tab"][data-tab="today"]'));
+
+    openEditor();
+    setField('edit-name', names().indexOf('Gym'), 'Muay Thai');
+    click(app().querySelector('[data-action="edit-save"]'));
+
+    const old = JSON.parse(window.localStorage.getItem('rt:day:2026-08-17') as string);
+    expect(old.tasks.find((t: { id: string }) => t.id === 'gym').name).toBe('Gym');
+    expect(old.templateVersion).toBe(1);
+  });
+
+  it('edits the weekday of the day opened from the week view, not today', () => {
+    boot();
+    click(app().querySelector('[data-action="tab"][data-tab="week"]'));
+    click(app().querySelector('[data-action="week-nav"][data-delta="-1"]'));
+    click(app().querySelector('[data-action="open-day"][data-date="2026-08-19"]')); // a Wednesday
+    openEditor();
+    expect(app().textContent).toContain('Every Wednesday');
+    expect(names()).toContain('See Pin');
   });
 });
