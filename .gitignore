@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.local
+.DS_Store
+.vite/
+
+# Personal spec docs — kept local, not published
+routine-tracker-spec.md
+routine-tracker-spec.v1.backup.md
