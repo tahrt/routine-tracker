@@ -19,7 +19,7 @@ npm run icons    # regenerate PWA icons (only after changing the mark)
 - **Today** — the weekday's checklist, tap to complete, live total % and core %.
 - **Week** — Mon–Sun skyline. Past days are tappable so a forgotten day can be logged; future days are inert; Next stops at the current week.
 - **Day status** — `active` / `rest` / `skipped`. Rest days are excluded from the week average, so a holiday doesn't read as a collapse.
-- **Edit tasks** — add, rename, retime, reorder, delete and flag tasks as core for any weekday. Edits apply from today on; days already logged keep the list they were logged with, with an opt-in "update this day" prompt.
+- **Edit tasks** — pick any weekday from the editor's day strip and add, rename, retime, reorder, delete or flag tasks as core. Edits across several weekdays save together as one template version, effective today; days already logged keep the list they were logged with, with an opt-in "update this day" prompt.
 - **Settings** — export/import JSON backups, home timezone, day cutoff hour, raw-data viewer, reset.
 - **Offline** — installable PWA, opens and works with no network.
 

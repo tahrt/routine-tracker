@@ -181,7 +181,7 @@ describe('template editing', () => {
   it('opens the editor for the current weekday, prefilled', () => {
     boot();
     openEditor();
-    expect(app().textContent).toContain('Every Monday');
+    expect(app().textContent).toContain('every Monday');
     expect(names()).toContain('Gym');
     expect((app().querySelector('[data-action="edit-type"]') as HTMLInputElement).value).toBe('WFH · Gym AM');
   });
@@ -314,7 +314,112 @@ describe('template editing', () => {
     click(app().querySelector('[data-action="week-nav"][data-delta="-1"]'));
     click(app().querySelector('[data-action="open-day"][data-date="2026-08-19"]')); // a Wednesday
     openEditor();
-    expect(app().textContent).toContain('Every Wednesday');
+    expect(app().textContent).toContain('every Wednesday');
     expect(names()).toContain('See Pin');
+  });
+});
+
+describe('editing other weekdays', () => {
+  const openEditor = (): void => click(app().querySelector('[data-action="edit-template"]'));
+  const pickDay = (weekday: number): void =>
+    click(app().querySelector(`[data-action="edit-weekday"][data-weekday="${weekday}"]`));
+  const names = (): string[] =>
+    [...app().querySelectorAll<HTMLInputElement>('[data-action="edit-name"]')].map((i) => i.value);
+  const setName = (index: number, value: string): void => {
+    const el = app().querySelector(`[data-action="edit-name"][data-index="${index}"]`) as HTMLInputElement;
+    el.value = value;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
+  it('switches to any weekday from inside the editor', () => {
+    boot(); // it is Monday
+    openEditor();
+    expect(app().textContent).toContain('every Monday');
+
+    pickDay(3); // Wednesday
+    expect(app().textContent).toContain('every Wednesday');
+    expect(names()).toContain('See Pin');
+
+    pickDay(6); // Saturday
+    expect(app().textContent).toContain('every Saturday');
+    expect(names()).toContain('Content creation batch');
+  });
+
+  it('is reachable from Settings without visiting a day', () => {
+    boot();
+    click(app().querySelector('[data-action="tab"][data-tab="settings"]'));
+    click(app().querySelector('[data-action="edit-template"]'));
+    expect(app().textContent).toContain('Edit tasks');
+    pickDay(4);
+    expect(app().textContent).toContain('every Thursday');
+  });
+
+  it('keeps edits when switching weekdays and saves them all at once', () => {
+    boot();
+    openEditor();
+    setName(names().indexOf('Gym'), 'Muay Thai'); // Monday
+
+    pickDay(3);
+    setName(names().indexOf('See Pin'), 'Date night'); // Wednesday
+
+    pickDay(1); // back to Monday — the edit is still in the draft
+    expect(names()).toContain('Muay Thai');
+
+    click(app().querySelector('[data-action="edit-save"]'));
+    const templates = JSON.parse(window.localStorage.getItem('rt:templates') as string);
+    expect(templates).toHaveLength(2); // one version, both weekdays
+    expect(templates[1].days['1'].tasks.find((t: { id: string }) => t.id === 'gym').name).toBe('Muay Thai');
+    expect(templates[1].days['3'].tasks.find((t: { id: string }) => t.id === 'pin').name).toBe('Date night');
+  });
+
+  it('marks weekdays with unsaved edits and only enables save when something changed', () => {
+    boot();
+    openEditor();
+    expect((app().querySelector('[data-action="edit-save"]') as HTMLButtonElement).disabled).toBe(true);
+
+    pickDay(5);
+    setName(0, 'Changed');
+    expect((app().querySelector('[data-action="edit-save"]') as HTMLButtonElement).disabled).toBe(false);
+    expect(app().querySelector('[data-action="edit-weekday"][data-weekday="5"]')?.className).toContain('is-dirty');
+    expect(app().querySelector('[data-action="edit-weekday"][data-weekday="2"]')?.className).not.toContain('is-dirty');
+  });
+
+  it('points at the offending weekday when a name is blank', () => {
+    boot();
+    openEditor();
+    pickDay(6); // Saturday
+    click(app().querySelector('[data-action="task-add"]'));
+    pickDay(1); // move away
+    click(app().querySelector('[data-action="edit-save"]'));
+
+    expect(document.getElementById('toast')?.textContent).toContain('Saturday');
+    expect(app().textContent).toContain('every Saturday'); // jumped back to it
+    expect(JSON.parse(window.localStorage.getItem('rt:templates') as string)).toHaveLength(1);
+  });
+
+  it('leaves other weekdays and their logged performance untouched', () => {
+    boot();
+    // Log last Wednesday fully, and note its percentage.
+    click(app().querySelector('[data-action="tab"][data-tab="week"]'));
+    click(app().querySelector('[data-action="week-nav"][data-delta="-1"]'));
+    click(app().querySelector('[data-action="open-day"][data-date="2026-08-19"]'));
+    for (const btn of [...app().querySelectorAll('[data-action="toggle-task"]')]) click(btn);
+    const wednesday = JSON.parse(window.localStorage.getItem('rt:day:2026-08-19') as string);
+    click(app().querySelector('[data-action="back"]'));
+    click(app().querySelector('[data-action="tab"][data-tab="today"]'));
+
+    // Now gut Monday's list.
+    openEditor();
+    click(app().querySelector('[data-action="task-delete"][data-index="0"]'));
+    click(app().querySelector('[data-action="task-delete"][data-index="0"]'));
+    click(app().querySelector('[data-action="edit-save"]'));
+
+    // Wednesday's record is byte-identical: same tasks, same completion.
+    expect(JSON.parse(window.localStorage.getItem('rt:day:2026-08-19') as string)).toEqual(wednesday);
+
+    // And Wednesday's template is unchanged in the new version.
+    const templates = JSON.parse(window.localStorage.getItem('rt:templates') as string);
+    expect(templates[1].days['3']).toEqual(templates[0].days['3']);
+    expect(templates[1].days['1']).not.toEqual(templates[0].days['1']);
   });
 });

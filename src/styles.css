@@ -829,3 +829,49 @@ button {
   justify-content: space-between;
   margin-bottom: 8px;
 }
+
+.daypick {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  margin-bottom: 14px;
+}
+
+.daypick__btn {
+  position: relative;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 11px;
+  font-size: 12px;
+  padding: 0;
+}
+
+.daypick__btn.is-active {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: #23180a;
+  font-weight: 600;
+}
+
+/* Dot marks a weekday with unsaved edits. */
+.daypick__btn.is-dirty::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--teal);
+}
+
+.daypick__btn.is-active.is-dirty::after {
+  background: #23180a;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

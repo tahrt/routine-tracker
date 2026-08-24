@@ -9,7 +9,7 @@ import { addDays, dateKey, isFutureKey, parseKey, todayKey as computeTodayKey, w
 import { currentTemplate, isOutOfSync, materializeDay, newTaskId, syncRecordToTemplate } from './lib/day';
 import { toggleTask } from './lib/stats';
 import { getStore, storageIsEphemeral } from './store';
-import type { DayRecord, DayStatus, DayTemplate } from './types';
+import type { DayRecord, DayStatus, WeekTemplate } from './types';
 import { toast } from './ui/dom';
 import { renderDay } from './views/day';
 import { renderEditTemplate } from './views/editTemplate';
@@ -17,6 +17,8 @@ import { renderSettings, type PendingImport } from './views/settings';
 import { renderWeek } from './views/week';
 
 type Tab = 'today' | 'week' | 'settings';
+
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
 
 interface AppState {
   tab: Tab;
@@ -28,8 +30,8 @@ interface AppState {
   resetArmed: boolean;
   pendingImport: (PendingImport & { raw: unknown }) | null;
   nudgeDismissed: boolean;
-  /** Open template editor: which weekday, and the unsaved draft of its tasks. */
-  editing: { weekday: number; draft: DayTemplate } | null;
+  /** Open template editor: the weekday on screen, plus an unsaved draft of all seven. */
+  editing: { weekday: number; draft: WeekTemplate } | null;
   /** Dates where the user chose to keep the old task list after a template edit. */
   syncDismissed: Set<string>;
 }
@@ -110,7 +112,7 @@ export const startApp = (): (() => void) => {
 
     let body: string;
     if (state.editing) {
-      body = renderEditTemplate(state.editing);
+      body = renderEditTemplate({ ...state.editing, dirty: dirtyWeekdays() });
     } else if (state.tab === 'today' || state.openDay) {
       const dateK = state.openDay ?? t;
       const record = store.getDay(dateK);
@@ -153,6 +155,33 @@ export const startApp = (): (() => void) => {
   };
 
   /* ------------------------------------------------------------------ actions */
+
+  /** Weekdays whose draft differs from the saved template. */
+  const dirtyWeekdays = (): number[] => {
+    const editing = state.editing;
+    if (!editing) return [];
+    const saved = currentTemplate(store.getTemplates(), today()).days;
+    return [0, 1, 2, 3, 4, 5, 6].filter(
+      (d) => JSON.stringify(editing.draft[d] ?? null) !== JSON.stringify(saved[d] ?? null),
+    );
+  };
+
+  /**
+   * Typing must not trigger a re-render — it would drop focus mid-word — so the
+   * few things that depend on draft state are patched in place instead.
+   */
+  const refreshDirtyIndicators = (): void => {
+    const dirty = dirtyWeekdays();
+    const save = document.querySelector<HTMLButtonElement>('[data-action="edit-save"]');
+    if (save) save.disabled = dirty.length === 0;
+    for (const btn of document.querySelectorAll<HTMLElement>('[data-action="edit-weekday"]')) {
+      btn.classList.toggle('is-dirty', dirty.includes(Number(btn.dataset.weekday)));
+    }
+  };
+
+  /** The weekday currently on screen in the template editor. */
+  const editingDay = (): WeekTemplate[number] | undefined =>
+    state.editing ? state.editing.draft[state.editing.weekday] : undefined;
 
   const openTab = (tab: Tab): void => {
     state.tab = tab;
@@ -235,16 +264,19 @@ export const startApp = (): (() => void) => {
 
     /* ------------------------------------------------------- template editing */
 
-    'edit-template': () => {
-      const dateK = state.openDay ?? today();
-      const weekday = parseKey(dateK).getDay();
+    'edit-template': (el) => {
+      const fromTab = el.dataset.weekday !== undefined;
+      const weekday = fromTab ? Number(el.dataset.weekday) : parseKey(state.openDay ?? today()).getDay();
       const tpl = currentTemplate(store.getTemplates(), today());
-      const day = tpl.days[weekday];
-      // Deep copy: the draft is discarded wholesale on cancel.
-      state.editing = {
-        weekday,
-        draft: { type: day?.type ?? '', tasks: (day?.tasks ?? []).map((t) => ({ ...t })) },
-      };
+      // Deep copy of all seven days: switching weekday inside the editor keeps
+      // edits, and the whole draft is discarded on cancel.
+      state.editing = { weekday, draft: structuredClone(tpl.days) };
+      render();
+    },
+
+    'edit-weekday': (el) => {
+      if (!state.editing) return;
+      state.editing.weekday = Number(el.dataset.weekday);
       render();
     },
 
@@ -254,8 +286,9 @@ export const startApp = (): (() => void) => {
     },
 
     'task-add': () => {
-      if (!state.editing) return;
-      state.editing.draft.tasks.push({ id: newTaskId(), name: '', time: '', core: false, habit: null, weight: 1 });
+      const day = editingDay();
+      if (!day) return;
+      day.tasks.push({ id: newTaskId(), name: '', time: '', core: false, habit: null, weight: 1 });
       render();
       // Put the cursor straight into the new row.
       const inputs = document.querySelectorAll<HTMLInputElement>('[data-action="edit-name"]');
@@ -263,17 +296,18 @@ export const startApp = (): (() => void) => {
     },
 
     'task-delete': (el) => {
-      if (!state.editing) return;
-      const i = Number(el.dataset.index);
-      state.editing.draft.tasks.splice(i, 1);
+      const day = editingDay();
+      if (!day) return;
+      day.tasks.splice(Number(el.dataset.index), 1);
       render();
     },
 
     'task-move': (el) => {
-      if (!state.editing) return;
+      const day = editingDay();
+      if (!day) return;
       const i = Number(el.dataset.index);
       const to = i + Number(el.dataset.dir);
-      const tasks = state.editing.draft.tasks;
+      const tasks = day.tasks;
       if (to < 0 || to >= tasks.length) return;
       const [moved] = tasks.splice(i, 1);
       if (moved) tasks.splice(to, 0, moved);
@@ -281,8 +315,7 @@ export const startApp = (): (() => void) => {
     },
 
     'task-core': (el) => {
-      if (!state.editing) return;
-      const task = state.editing.draft.tasks[Number(el.dataset.index)];
+      const task = editingDay()?.tasks[Number(el.dataset.index)];
       if (task) task.core = !task.core;
       render();
     },
@@ -290,19 +323,23 @@ export const startApp = (): (() => void) => {
     'edit-save': () => {
       const editing = state.editing;
       if (!editing) return;
-      const tasks = editing.draft.tasks.map((t) => ({ ...t, name: t.name.trim(), time: t.time.trim() }));
-      if (tasks.some((t) => t.name === '')) {
-        toast('Every task needs a name.', 'error');
-        return;
+
+      const days: WeekTemplate = {};
+      for (const d of [0, 1, 2, 3, 4, 5, 6]) {
+        const day = editing.draft[d];
+        if (!day) continue;
+        const tasks = day.tasks.map((t) => ({ ...t, name: t.name.trim(), time: t.time.trim() }));
+        if (tasks.some((t) => t.name === '')) {
+          editing.weekday = d; // show the offending day
+          toast(`Every task needs a name — check ${WEEKDAY_NAMES[d]}.`, 'error');
+          render();
+          return;
+        }
+        days[d] = { type: day.type.trim(), tasks };
       }
-      const t = today();
-      const base = currentTemplate(store.getTemplates(), t);
+
       // A new version, so days already logged keep the tasks they were logged with.
-      store.appendTemplate({
-        effectiveFrom: t,
-        createdAt: nowIso(),
-        days: { ...structuredClone(base.days), [editing.weekday]: { type: editing.draft.type.trim(), tasks } },
-      });
+      store.appendTemplate({ effectiveFrom: today(), createdAt: nowIso(), days });
       state.editing = null;
       state.syncDismissed.clear();
       toast('Saved. Applies from today on.');
@@ -408,16 +445,20 @@ export const startApp = (): (() => void) => {
   const onInput = (ev: Event): void => {
     const el = ev.target;
     if (!state.editing) return;
+    const day = editingDay();
+    if (!day) return;
     if (el instanceof HTMLInputElement && el.dataset.action === 'edit-type') {
-      state.editing.draft.type = el.value;
+      day.type = el.value;
+      refreshDirtyIndicators();
       return;
     }
     if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLSelectElement)) return;
-    const task = state.editing.draft.tasks[Number(el.dataset.index)];
+    const task = day.tasks[Number(el.dataset.index)];
     if (!task) return;
     if (el.dataset.action === 'edit-name') task.name = el.value;
     if (el.dataset.action === 'edit-time') task.time = el.value;
     if (el.dataset.action === 'edit-habit') task.habit = el.value === '' ? null : el.value;
+    refreshDirtyIndicators();
   };
 
   const onChange = (ev: Event): void => {

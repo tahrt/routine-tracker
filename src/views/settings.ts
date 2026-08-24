@@ -94,6 +94,14 @@ export const renderSettings = ({
       </div>
 
       <div class="card">
+        <h2 class="card__title">Weekly schedule</h2>
+        <p class="card__note">Add, rename, reorder or remove tasks on any weekday.</p>
+        <div class="row">
+          <button class="btn" type="button" data-action="edit-template">Edit tasks</button>
+        </div>
+      </div>
+
+      <div class="card">
         <h2 class="card__title">Time</h2>
         <label class="field">
           <span class="field__label">Home timezone</span>
