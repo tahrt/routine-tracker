@@ -1,7 +1,7 @@
-/** Spec §6 — percentage and week-average rules. */
+/** Spec §6 — percentage, week-average and habit-progress rules. */
 
 import { describe, expect, it } from 'vitest';
-import { corePct, pct, toggleTask, weekSummary } from '../src/lib/stats';
+import { corePct, habitProgress, pct, toggleTask, weekSummary } from '../src/lib/stats';
 import type { DayRecord, DayStatus, DayTask } from '../src/types';
 
 const task = (id: string, done: boolean, extra: Partial<DayTask> = {}): DayTask => ({
@@ -27,6 +27,8 @@ const record = (date: string, tasks: DayTask[], status: DayStatus = 'active'): D
   updatedAt: '2026-08-24T00:00:00.000Z',
   editedRetroactively: false,
 });
+
+const habitTask = (habit: string, done: boolean): DayTask => task(habit, done, { core: true, habit });
 
 describe('pct', () => {
   it('is 0 for an empty list rather than NaN', () => {
@@ -113,6 +115,70 @@ describe('weekSummary', () => {
     const s = weekSummary(['2026-08-24'], records);
     expect(s.average).toBe(0); // core: gym not done
     expect(s.averageTotal).toBe(50);
+  });
+});
+
+describe('habitProgress', () => {
+  it('calculates lifetime completion from tracked scheduled days only', () => {
+    const records = [
+      record('2026-08-20', [habitTask('gym', true)]),
+      record('2026-08-21', [habitTask('gym', false)]),
+      record('2026-08-22', [task('learning', true, { core: true, habit: 'learning' })]),
+      record('2026-08-23', [habitTask('gym', true)]),
+    ];
+    const s = habitProgress('gym', records, '2026-08-24');
+    expect(s.firstDate).toBe('2026-08-20');
+    expect(s.completed).toBe(2);
+    expect(s.scheduled).toBe(3);
+    expect(s.completionRate).toBe(67);
+  });
+
+  it('keeps rest, unscheduled and untracked days neutral for streaks', () => {
+    const records = [
+      record('2026-08-17', [habitTask('gym', true)]),
+      record('2026-08-18', [task('work', true, { core: true, habit: 'work' })]),
+      record('2026-08-19', [habitTask('gym', false)], 'rest'),
+      // 20 Aug has no record at all.
+      record('2026-08-21', [habitTask('gym', true)]),
+      record('2026-08-24', [habitTask('gym', true)]),
+    ];
+    const s = habitProgress('gym', records, '2026-08-24');
+    expect(s.currentStreak).toBe(3);
+    expect(s.longestStreak).toBe(3);
+    expect(s.scheduled).toBe(3);
+    expect(s.completed).toBe(3);
+  });
+
+  it('breaks a streak on an active miss or skipped scheduled day', () => {
+    const records = [
+      record('2026-08-17', [habitTask('gym', true)]),
+      record('2026-08-19', [habitTask('gym', false)]),
+      record('2026-08-21', [habitTask('gym', true)]),
+      record('2026-08-24', [habitTask('gym', true)], 'skipped'),
+    ];
+    const s = habitProgress('gym', records, '2026-08-24');
+    expect(s.longestStreak).toBe(1);
+    expect(s.currentStreak).toBe(0);
+    expect(s.completionRate).toBe(50);
+  });
+
+  it('marks the recent seven calendar days with distinct states', () => {
+    const records = [
+      record('2026-08-19', [habitTask('gym', true)]),
+      record('2026-08-20', [habitTask('gym', false)]),
+      record('2026-08-21', [habitTask('gym', false)], 'rest'),
+      record('2026-08-22', [habitTask('work', true)]),
+    ];
+    const s = habitProgress('gym', records, '2026-08-24');
+    expect(s.recent7.map((d) => d.state)).toEqual([
+      'untracked',
+      'done',
+      'missed',
+      'rest',
+      'unscheduled',
+      'untracked',
+      'untracked',
+    ]);
   });
 });
 

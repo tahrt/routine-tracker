@@ -1,6 +1,7 @@
-/** Percentage and week-average rules. Spec §6. */
+/** Percentage, week-average and habit-progress rules. Spec §6 and §5.3. */
 
-import type { DayRecord, DayTask } from '../types';
+import { addDays, dateKey, parseKey } from './date';
+import type { DayRecord, DayTask, HabitId } from '../types';
 
 const weightOf = (t: DayTask): number => (typeof t.weight === 'number' && t.weight > 0 ? t.weight : 1);
 
@@ -66,6 +67,106 @@ export const weekSummary = (
     tracked,
     rest,
     untracked,
+  };
+};
+
+export type HabitDayState = 'done' | 'missed' | 'rest' | 'unscheduled' | 'untracked';
+
+export interface HabitDayPoint {
+  date: string;
+  state: HabitDayState;
+}
+
+export interface HabitProgress {
+  habitId: HabitId;
+  /** First tracked, non-rest date on which this core habit was scheduled. */
+  firstDate: string | null;
+  /** Number of tracked, non-rest scheduled days completed. */
+  completed: number;
+  /** Number of tracked, non-rest days on which the habit was scheduled. */
+  scheduled: number;
+  /** completed / scheduled, rounded to a whole percent. */
+  completionRate: number;
+  /** Consecutive successful scheduled opportunities ending at the latest one. */
+  currentStreak: number;
+  /** Best successful chain across all tracked scheduled opportunities. */
+  longestStreak: number;
+  /** Today plus the previous six calendar days. */
+  recent7: HabitDayPoint[];
+}
+
+const habitTasks = (rec: DayRecord, habitId: HabitId): DayTask[] =>
+  rec.tasks.filter((t) => t.core && t.habit === habitId);
+
+/**
+ * A habit is complete for a day only when every core task mapped to that habit is
+ * complete. This keeps the statistic day-based even if a habit gets more than one
+ * task on the same date. A skipped day is always an honest miss.
+ */
+const habitStateForRecord = (rec: DayRecord, habitId: HabitId): HabitDayState => {
+  const tasks = habitTasks(rec, habitId);
+  if (!tasks.length) return 'unscheduled';
+  if (rec.status === 'rest') return 'rest';
+  if (rec.status === 'skipped') return 'missed';
+  return tasks.every((t) => t.done) ? 'done' : 'missed';
+};
+
+/**
+ * Lifetime progress for one stable habit id.
+ *
+ * Only persisted day snapshots are used. Missing records stay "untracked" rather
+ * than being invented as failures, matching the app's data-honesty rule (§4.6).
+ * Rest days and days where the habit was not scheduled are neutral and do not
+ * affect the completion rate or break a streak.
+ */
+export const habitProgress = (
+  habitId: HabitId,
+  records: readonly DayRecord[],
+  todayKey: string,
+): HabitProgress => {
+  const byDate = new Map(records.filter((r) => r.date <= todayKey).map((r) => [r.date, r] as const));
+  const sorted = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+
+  let firstDate: string | null = null;
+  let completed = 0;
+  let scheduled = 0;
+  let currentStreak = 0;
+  let longestStreak = 0;
+  let running = 0;
+
+  for (const rec of sorted) {
+    const state = habitStateForRecord(rec, habitId);
+    if (state === 'unscheduled' || state === 'rest') continue;
+    if (firstDate === null) firstDate = rec.date;
+
+    scheduled += 1;
+    if (state === 'done') {
+      completed += 1;
+      running += 1;
+      longestStreak = Math.max(longestStreak, running);
+    } else {
+      running = 0;
+    }
+  }
+  currentStreak = running;
+
+  const today = parseKey(todayKey);
+  const recent7: HabitDayPoint[] = [];
+  for (let offset = -6; offset <= 0; offset += 1) {
+    const key = dateKey(addDays(today, offset));
+    const rec = byDate.get(key);
+    recent7.push({ date: key, state: rec ? habitStateForRecord(rec, habitId) : 'untracked' });
+  }
+
+  return {
+    habitId,
+    firstDate,
+    completed,
+    scheduled,
+    completionRate: scheduled ? Math.round((completed / scheduled) * 100) : 0,
+    currentStreak,
+    longestStreak,
+    recent7,
   };
 };
 

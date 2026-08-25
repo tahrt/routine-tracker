@@ -5,6 +5,7 @@
  * import and the listeners/timer can be torn down (used by the integration tests).
  */
 
+import { HABITS } from './config/schedule';
 import { addDays, dateKey, isFutureKey, parseKey, todayKey as computeTodayKey, weekKeys } from './lib/date';
 import { currentTemplate, isOutOfSync, materializeDay, newTaskId, syncRecordToTemplate } from './lib/day';
 import { toggleTask } from './lib/stats';
@@ -13,10 +14,11 @@ import type { DayRecord, DayStatus, WeekTemplate } from './types';
 import { toast } from './ui/dom';
 import { renderDay } from './views/day';
 import { renderEditTemplate } from './views/editTemplate';
+import { renderProgress } from './views/progress';
 import { renderSettings, type PendingImport } from './views/settings';
 import { renderWeek } from './views/week';
 
-type Tab = 'today' | 'week' | 'settings';
+type Tab = 'today' | 'week' | 'progress' | 'settings';
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
 
@@ -94,6 +96,7 @@ export const startApp = (): (() => void) => {
       [
         ['today', 'Today'],
         ['week', 'Week'],
+        ['progress', 'Progress'],
         ['settings', 'Settings'],
       ] as [Tab, string][]
     )
@@ -129,6 +132,8 @@ export const startApp = (): (() => void) => {
       });
     } else if (state.tab === 'week') {
       body = renderWeek({ anchorKey: state.weekAnchor, todayKey: t, records: recordsFor(weekKeys(parseKey(state.weekAnchor))) });
+    } else if (state.tab === 'progress') {
+      body = renderProgress({ todayKey: t, records: store.listDays({ to: t }), habits: HABITS });
     } else {
       body = renderSettings({
         settings: store.getSettings(),

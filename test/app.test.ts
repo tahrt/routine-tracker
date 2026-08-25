@@ -44,7 +44,7 @@ describe('app', () => {
   it('renders today with the seeded template and a tab bar', () => {
     boot();
     expect(app().textContent).toContain('WFH · Gym AM');
-    expect(app().querySelectorAll('.tabbar__btn')).toHaveLength(3);
+    expect(app().querySelectorAll('.tabbar__btn')).toHaveLength(4);
     expect(app().querySelector('.tabbar__btn.is-active')?.textContent?.trim()).toBe('Today');
   });
 
@@ -115,6 +115,21 @@ describe('app', () => {
     click(app().querySelector('[data-action="back"]'));
     expect(app().textContent).toContain('1 rest');
     expect(app().textContent).toContain('0 of 1 day tracked');
+  });
+
+  it('opens Progress and reflects lifetime core-activity completion', () => {
+    boot();
+    click(app().querySelector('[data-action="toggle-task"][data-id="gym"]'));
+    click(app().querySelector('[data-action="tab"][data-tab="progress"]'));
+
+    expect(app().querySelector('.tabbar__btn.is-active')?.textContent?.trim()).toBe('Progress');
+    const gymCard = [...app().querySelectorAll<HTMLElement>('.progress-card')].find((el) =>
+      el.textContent?.includes('Gym'),
+    );
+    expect(gymCard).toBeDefined();
+    expect(gymCard?.textContent).toContain('1 of 1 tracked day');
+    expect(gymCard?.textContent).toContain('100%');
+    expect(gymCard?.textContent).toContain('1 day current');
   });
 
   it('exports a backup and records when it happened', () => {
@@ -312,7 +327,7 @@ describe('template editing', () => {
     boot();
     click(app().querySelector('[data-action="tab"][data-tab="week"]'));
     click(app().querySelector('[data-action="week-nav"][data-delta="-1"]'));
-    click(app().querySelector('[data-action="open-day"][data-date="2026-08-19"]')); // a Wednesday
+    click(app().querySelector('[data-action="open-day"][data-date="2026-08-19"]'));
     openEditor();
     expect(app().textContent).toContain('every Wednesday');
     expect(names()).toContain('See Pin');

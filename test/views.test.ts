@@ -1,10 +1,11 @@
 /** Views are pure string builders, so they can be asserted without a DOM. */
 
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SCHEDULE } from '../src/config/schedule';
+import { DEFAULT_SCHEDULE, HABITS } from '../src/config/schedule';
 import { materializeDay } from '../src/lib/day';
 import type { TemplateVersion } from '../src/types';
 import { renderDay } from '../src/views/day';
+import { renderProgress } from '../src/views/progress';
 import { renderWeek } from '../src/views/week';
 
 const TEMPLATES: TemplateVersion[] = [
@@ -90,5 +91,40 @@ describe('renderWeek', () => {
     const html = renderWeek({ anchorKey: TODAY, todayKey: TODAY, records: { '2026-08-24': rest } });
     expect(html).toContain('1 rest');
     expect(html).toContain('0<span class="meter__pct">%</span>');
+  });
+});
+
+describe('renderProgress', () => {
+  it('shows one lifetime card per registered habit', () => {
+    const monday = materializeDay(TODAY, TEMPLATES, NOW, TODAY);
+    const doneGym = {
+      ...monday,
+      tasks: monday.tasks.map((t) => (t.habit === 'gym' ? { ...t, done: true } : t)),
+    };
+    const html = renderProgress({ todayKey: TODAY, records: [doneGym], habits: HABITS });
+    expect(html).toContain('Progress');
+    expect(html).toContain('Gym');
+    expect(html).toContain('Personal project');
+    expect((html.match(/class="progress-card"/g) ?? []).length).toBe(HABITS.length);
+  });
+
+  it('prints lifetime completion and streak values from snapshots', () => {
+    const monday = materializeDay(TODAY, TEMPLATES, NOW, TODAY);
+    const doneGym = {
+      ...monday,
+      tasks: monday.tasks.map((t) => (t.habit === 'gym' ? { ...t, done: true } : t)),
+    };
+    const html = renderProgress({ todayKey: TODAY, records: [doneGym], habits: HABITS.filter((h) => h.id === 'gym') });
+    expect(html).toContain('1 of 1 tracked day');
+    expect(html).toContain('100<span class="meter__pct">%</span>');
+    expect(html).toContain('<strong>1</strong> day current');
+    expect(html).toContain('<strong>1</strong> day best');
+  });
+
+  it('shows an empty-history state without inventing failures', () => {
+    const html = renderProgress({ todayKey: TODAY, records: [], habits: HABITS.filter((h) => h.id === 'gym') });
+    expect(html).toContain('No tracked days yet');
+    expect(html).toContain('0<span class="meter__pct">%</span>');
+    expect(html).toContain('streak-dot--untracked');
   });
 });
