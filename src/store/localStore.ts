@@ -5,19 +5,21 @@
  * re-serialization of the whole history:
  *
  *   rt:meta            { schemaVersion, settings }
+ *   rt:habits          [ …Habit… ]
  *   rt:templates       [ …TemplateVersion… ]
  *   rt:day:YYYY-MM-DD  { …DayRecord… }
  *   rt:index           ['YYYY-MM-DD', …]  sorted, for fast listing
  */
 
-import { DEFAULT_SCHEDULE, DEFAULT_SETTINGS } from '../config/schedule';
+import { DEFAULT_HABITS, DEFAULT_SCHEDULE, DEFAULT_SETTINGS } from '../config/schedule';
 import { isDateKey } from '../lib/date';
-import type { DayRecord, RootData, Settings, TemplateVersion } from '../types';
+import type { DayRecord, Habit, RootData, Settings, TemplateVersion } from '../types';
 import type { KV } from './kv';
 import { CURRENT_SCHEMA_VERSION, migrate, needsMigration, validateImport } from './migrations';
 
 const K = {
   meta: 'rt:meta',
+  habits: 'rt:habits',
   templates: 'rt:templates',
   index: 'rt:index',
   day: (d: string) => `rt:day:${d}`,
@@ -48,6 +50,10 @@ export interface Store {
   dayKeys(): string[];
   getTemplates(): TemplateVersion[];
   appendTemplate(v: Omit<TemplateVersion, 'version'>): TemplateVersion;
+  getHabits(): Habit[];
+  addHabit(label: string): Habit;
+  setHabitLabel(id: string, label: string): Habit | undefined;
+  setHabitArchived(id: string, archived: boolean): Habit | undefined;
   getSettings(): Settings;
   setSettings(patch: Partial<Settings>): Settings;
   exportAll(): RootData;
@@ -89,6 +95,8 @@ export const createLocalStore = (kv: KV): Store => {
 
   const readTemplates = (): TemplateVersion[] => parse<TemplateVersion[]>(kv.get(K.templates), []);
   const writeTemplates = (t: TemplateVersion[]): void => kv.set(K.templates, JSON.stringify(t));
+  const readHabits = (): Habit[] => parse<Habit[]>(kv.get(K.habits), []);
+  const writeHabits = (h: readonly Habit[]): void => kv.set(K.habits, JSON.stringify(h));
 
   const readDay = (dateK: string): DayRecord | undefined => {
     const raw = kv.get(K.day(dateK));
@@ -103,13 +111,20 @@ export const createLocalStore = (kv: KV): Store => {
       const rec = readDay(k);
       if (rec) days[k] = rec;
     }
-    return { schemaVersion: meta.schemaVersion, settings: meta.settings, templates: readTemplates(), days };
+    return {
+      schemaVersion: meta.schemaVersion,
+      settings: meta.settings,
+      habits: readHabits(),
+      templates: readTemplates(),
+      days,
+    };
   };
 
   /** Replace everything with `root`, exploding it back into per-key layout. */
   const writeRoot = (root: RootData): void => {
     for (const k of scanDayKeys()) kv.remove(K.day(k));
     writeMeta({ schemaVersion: root.schemaVersion, settings: { ...DEFAULT_SETTINGS, ...root.settings } });
+    writeHabits(root.habits?.length ? root.habits : structuredClone(DEFAULT_HABITS));
     writeTemplates(root.templates);
     const keys = Object.keys(root.days).filter(isDateKey).sort();
     for (const k of keys) kv.set(K.day(k), JSON.stringify(root.days[k]));
@@ -118,6 +133,7 @@ export const createLocalStore = (kv: KV): Store => {
 
   const seed = (nowIso: string, todayKey: string): void => {
     writeMeta({ schemaVersion: CURRENT_SCHEMA_VERSION, settings: { ...DEFAULT_SETTINGS } });
+    writeHabits(structuredClone(DEFAULT_HABITS));
     writeTemplates([
       { version: 1, effectiveFrom: todayKey, createdAt: nowIso, days: structuredClone(DEFAULT_SCHEDULE) },
     ]);
@@ -141,6 +157,7 @@ export const createLocalStore = (kv: KV): Store => {
           { version: 1, effectiveFrom: todayKey, createdAt: nowIso, days: structuredClone(DEFAULT_SCHEDULE) },
         ]);
       }
+      if (readHabits().length === 0) writeHabits(structuredClone(DEFAULT_HABITS));
       // The index is a cache; the day keys are the truth. Rebuild if they diverge.
       const scanned = scanDayKeys();
       const indexed = readIndex();
@@ -181,6 +198,50 @@ export const createLocalStore = (kv: KV): Store => {
       writeTemplates([...all, created]);
       notify();
       return created;
+    },
+
+    getHabits: readHabits,
+
+    addHabit(label) {
+      const clean = label.trim();
+      if (!clean) throw new Error('Habit needs a name.');
+      const all = readHabits();
+      const base =
+        clean
+          .toLowerCase()
+          .normalize('NFKD')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '') || 'habit';
+      const ids = new Set(all.map((h) => h.id));
+      let id = base;
+      let suffix = 2;
+      while (ids.has(id)) id = `${base}-${suffix++}`;
+      const habit: Habit = { id, label: clean, color: 'slate' };
+      writeHabits([...all, habit]);
+      notify();
+      return habit;
+    },
+
+    setHabitLabel(id, label) {
+      const clean = label.trim();
+      if (!clean) throw new Error('Habit needs a name.');
+      const all = readHabits();
+      const found = all.find((h) => h.id === id);
+      if (!found) return undefined;
+      const next: Habit = { ...found, label: clean };
+      writeHabits(all.map((h) => (h.id === id ? next : h)));
+      notify();
+      return next;
+    },
+
+    setHabitArchived(id, archived) {
+      const all = readHabits();
+      const found = all.find((h) => h.id === id);
+      if (!found) return undefined;
+      const next: Habit = { ...found, archived };
+      writeHabits(all.map((h) => (h.id === id ? next : h)));
+      notify();
+      return next;
     },
 
     getSettings() {

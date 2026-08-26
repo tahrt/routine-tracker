@@ -1,7 +1,7 @@
 /** Settings — backup, import, time rules, danger zone. Spec §5.6–§5.7. */
 
 import { CURRENT_SCHEMA_VERSION } from '../store/migrations';
-import type { Settings } from '../types';
+import type { Habit, Settings } from '../types';
 import { esc } from '../ui/dom';
 
 const COMMON_ZONES = [
@@ -24,6 +24,7 @@ export interface PendingImport {
 
 export interface SettingsViewProps {
   settings: Settings;
+  habits: readonly Habit[];
   dayCount: number;
   templateCount: number;
   ephemeral: boolean;
@@ -42,6 +43,7 @@ const daysSince = (iso: string | null): number | null => {
 
 export const renderSettings = ({
   settings,
+  habits,
   dayCount,
   templateCount,
   ephemeral,
@@ -98,6 +100,33 @@ export const renderSettings = ({
         <p class="card__note">Add, rename, reorder or remove tasks on any weekday.</p>
         <div class="row">
           <button class="btn" type="button" data-action="edit-template">Edit tasks</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card__title">Habits</h2>
+        <p class="card__note">Rename a habit without resetting its Progress history. The stable id stays unchanged.</p>
+        ${habits
+          .map(
+            (habit) => `<div class="field">
+              <span class="field__label">${esc(habit.id)}${habit.archived ? ' · archived' : ''}</span>
+              <div class="row">
+                <input class="field__input" type="text" value="${esc(habit.label)}"
+                       data-action="set-habit-label" data-id="${esc(habit.id)}" />
+                <button class="btn btn--tiny" type="button" data-action="toggle-habit-archive"
+                        data-id="${esc(habit.id)}" data-archived="${habit.archived === true}">
+                  ${habit.archived ? 'Restore' : 'Archive'}
+                </button>
+              </div>
+            </div>`,
+          )
+          .join('')}
+        <div class="field">
+          <span class="field__label">New habit</span>
+          <div class="row">
+            <input id="new-habit-label" class="field__input" type="text" placeholder="e.g. Morning run" />
+            <button class="btn" type="button" data-action="add-habit">+ Add habit</button>
+          </div>
         </div>
       </div>
 

@@ -85,10 +85,10 @@ export const DEFAULT_SCHEDULE: WeekTemplate = {
 };
 
 /**
- * Habit registry, used by the streak view (v1.1). Kept separate from task ids
- * so a task can be renamed or moved between weekdays without breaking its chain.
+ * Seed habit registry. Runtime labels live in storage so a rename changes only
+ * presentation while the stable id keeps streak/history continuity.
  */
-export const HABITS: Habit[] = [
+export const DEFAULT_HABITS: Habit[] = [
   { id: 'gym', label: 'Gym', color: 'teal' },
   { id: 'personal', label: 'Personal project', color: 'amber' },
   { id: 'jobsearch', label: 'Job search', color: 'violet' },
@@ -97,6 +97,9 @@ export const HABITS: Habit[] = [
   { id: 'pin', label: 'Pin', color: 'coral' },
   { id: 'work', label: 'Work', color: 'slate' },
 ];
+
+/** Backward-compatible alias for tests and older imports. */
+export const HABITS = DEFAULT_HABITS;
 
 export const DEFAULT_SETTINGS: Settings = {
   timezone: 'Asia/Bangkok',

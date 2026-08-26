@@ -29,7 +29,9 @@ const dotText = (state: HabitDayState): string => {
 };
 
 export const renderProgress = ({ todayKey, records, habits }: ProgressViewProps): string => {
-  const rows = habits.map((habit) => ({ habit, stats: habitProgress(habit.id, records, todayKey) }));
+  const rows = habits
+    .map((habit) => ({ habit, stats: habitProgress(habit.id, records, todayKey) }))
+    .filter(({ habit, stats }) => !habit.archived || stats.scheduled > 0);
   const withHistory = rows.filter(({ stats }) => stats.scheduled > 0);
   const bestCurrent = withHistory.reduce((best, row) => Math.max(best, row.stats.currentStreak), 0);
 

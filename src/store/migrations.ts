@@ -5,12 +5,12 @@
  * the pre-migration blob is kept under backup:preMigration:v{n} before saving.
  */
 
-import { DEFAULT_SCHEDULE, DEFAULT_SETTINGS } from '../config/schedule';
+import { DEFAULT_HABITS, DEFAULT_SCHEDULE, DEFAULT_SETTINGS } from '../config/schedule';
 import { resolveTask } from '../lib/day';
 import { isDateKey, parseKey } from '../lib/date';
-import type { DayRecord, DayTask, RootData, TemplateVersion, WeekTemplate } from '../types';
+import type { DayRecord, DayTask, Habit, RootData, TemplateVersion, WeekTemplate } from '../types';
 
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 type Migration = (data: any) => any;
 
@@ -74,11 +74,39 @@ const v1_to_v2: Migration = (data) => {
     settings: { ...DEFAULT_SETTINGS, ...(data?.settings ?? {}) },
     templates: [template],
     days,
+  };
+};
+
+/**
+ * v3 — persist the habit registry so labels can change without changing the
+ * stable ids stored in templates/day snapshots. Unknown legacy ids are kept.
+ */
+const v2_to_v3: Migration = (data) => {
+  const habits = new Map<string, Habit>(DEFAULT_HABITS.map((h) => [h.id, structuredClone(h)]));
+  const remember = (id: unknown): void => {
+    if (typeof id !== 'string' || id === '' || habits.has(id)) return;
+    habits.set(id, { id, label: id, color: 'slate' });
+  };
+
+  for (const tpl of (data?.templates ?? []) as TemplateVersion[]) {
+    for (const day of Object.values(tpl.days ?? {})) {
+      for (const task of day?.tasks ?? []) remember(task.habit);
+    }
+  }
+  for (const day of Object.values((data?.days ?? {}) as Record<string, DayRecord>)) {
+    for (const task of day?.tasks ?? []) remember(task.habit);
+  }
+
+  return {
+    ...data,
+    schemaVersion: 3,
+    habits: [...habits.values()],
   } satisfies RootData;
 };
 
 const MIGRATIONS: Record<number, Migration> = {
   1: v1_to_v2,
+  2: v2_to_v3,
 };
 
 export const needsMigration = (data: { schemaVersion?: number }): boolean =>

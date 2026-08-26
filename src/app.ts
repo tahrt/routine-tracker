@@ -5,7 +5,6 @@
  * import and the listeners/timer can be torn down (used by the integration tests).
  */
 
-import { HABITS } from './config/schedule';
 import { addDays, dateKey, isFutureKey, parseKey, todayKey as computeTodayKey, weekKeys } from './lib/date';
 import { currentTemplate, isOutOfSync, materializeDay, newTaskId, syncRecordToTemplate } from './lib/day';
 import { toggleTask } from './lib/stats';
@@ -112,10 +111,11 @@ export const startApp = (): (() => void) => {
     if (!root) return;
     const t = today();
     const templates = store.getTemplates();
+    const habits = store.getHabits();
 
     let body: string;
     if (state.editing) {
-      body = renderEditTemplate({ ...state.editing, dirty: dirtyWeekdays() });
+      body = renderEditTemplate({ ...state.editing, dirty: dirtyWeekdays(), habits });
     } else if (state.tab === 'today' || state.openDay) {
       const dateK = state.openDay ?? t;
       const record = store.getDay(dateK);
@@ -133,10 +133,11 @@ export const startApp = (): (() => void) => {
     } else if (state.tab === 'week') {
       body = renderWeek({ anchorKey: state.weekAnchor, todayKey: t, records: recordsFor(weekKeys(parseKey(state.weekAnchor))) });
     } else if (state.tab === 'progress') {
-      body = renderProgress({ todayKey: t, records: store.listDays({ to: t }), habits: HABITS });
+      body = renderProgress({ todayKey: t, records: store.listDays({ to: t }), habits });
     } else {
       body = renderSettings({
         settings: store.getSettings(),
+        habits,
         dayCount: store.dayKeys().length,
         templateCount: templates.length,
         ephemeral: storageIsEphemeral,
@@ -266,7 +267,6 @@ export const startApp = (): (() => void) => {
       render();
     },
 
-
     /* ------------------------------------------------------- template editing */
 
     'edit-template': (el) => {
@@ -362,6 +362,31 @@ export const startApp = (): (() => void) => {
 
     'sync-dismiss': () => {
       state.syncDismissed.add(state.openDay ?? today());
+      render();
+    },
+
+    'add-habit': () => {
+      const input = document.getElementById('new-habit-label') as HTMLInputElement | null;
+      const label = input?.value.trim() ?? '';
+      if (!label) {
+        toast('Habit needs a name.', 'error');
+        return;
+      }
+      try {
+        store.addHabit(label);
+        toast(`Added habit “${label}”.`);
+        render();
+      } catch (err) {
+        toast(err instanceof Error ? err.message : 'Could not add habit.', 'error');
+      }
+    },
+
+    'toggle-habit-archive': (el) => {
+      const id = el.dataset.id;
+      if (!id) return;
+      const archived = el.dataset.archived === 'true';
+      store.setHabitArchived(id, !archived);
+      toast(archived ? 'Habit restored.' : 'Habit archived. History is preserved.');
       render();
     },
 
@@ -479,6 +504,21 @@ export const startApp = (): (() => void) => {
       return;
     }
     if (!(el instanceof HTMLInputElement)) return;
+
+    if (el.dataset.action === 'set-habit-label') {
+      const id = el.dataset.id;
+      if (!id) return;
+      try {
+        const updated = store.setHabitLabel(id, el.value);
+        if (!updated) return;
+        toast(`Habit renamed to “${updated.label}”. History is unchanged.`);
+        render();
+      } catch (err) {
+        toast(err instanceof Error ? err.message : 'Could not rename habit.', 'error');
+        render();
+      }
+      return;
+    }
 
     if (el.dataset.action === 'set-timezone') {
       const tz = el.value.trim();

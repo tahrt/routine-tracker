@@ -1,7 +1,6 @@
 /** Weekday template editor. Spec §5.4 — edits the recurring weekday, not one date. */
 
-import { HABITS } from '../config/schedule';
-import type { DayTemplate, WeekTemplate } from '../types';
+import type { DayTemplate, Habit, WeekTemplate } from '../types';
 import { cx, esc } from '../ui/dom';
 
 const WEEKDAY_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
@@ -16,14 +15,19 @@ export interface EditTemplateProps {
   draft: WeekTemplate;
   /** Weekdays whose draft differs from what is saved. */
   dirty: readonly number[];
+  /** Persistent registry: labels may change, ids stay stable. */
+  habits: readonly Habit[];
 }
 
-const habitOptions = (selected: string | null | undefined): string =>
+const habitOptions = (habits: readonly Habit[], selected: string | null | undefined): string =>
   [`<option value=""${selected ? '' : ' selected'}>No habit</option>`]
     .concat(
-      HABITS.map(
-        (h) => `<option value="${esc(h.id)}"${selected === h.id ? ' selected' : ''}>${esc(h.label)}</option>`,
-      ),
+      habits
+        .filter((h) => !h.archived || selected === h.id)
+        .map(
+          (h) =>
+            `<option value="${esc(h.id)}"${selected === h.id ? ' selected' : ''}>${esc(h.label)}${h.archived ? ' (archived)' : ''}</option>`,
+        ),
     )
     .join('');
 
@@ -37,7 +41,12 @@ const dayPicker = (weekday: number, dirty: readonly number[]): string => `
     ).join('')}
   </div>`;
 
-const taskEditor = (task: DayTemplate['tasks'][number], index: number, count: number): string => `
+const taskEditor = (
+  task: DayTemplate['tasks'][number],
+  index: number,
+  count: number,
+  habits: readonly Habit[],
+): string => `
   <li class="edit-task">
     <div class="edit-task__row">
       <input class="field__input edit-task__name" type="text" value="${esc(task.name)}"
@@ -53,7 +62,7 @@ const taskEditor = (task: DayTemplate['tasks'][number], index: number, count: nu
       <input class="field__input edit-task__time" type="text" value="${esc(task.time)}"
              placeholder="e.g. 19:00–20:30" data-action="edit-time" data-index="${index}" />
       <select class="field__input edit-task__habit" data-action="edit-habit" data-index="${index}"
-              aria-label="Habit">${habitOptions(task.habit)}</select>
+              aria-label="Habit">${habitOptions(habits, task.habit)}</select>
     </div>
     <div class="edit-task__row edit-task__row--foot">
       <button class="chip ${task.core ? 'chip--on chip--active' : ''}" type="button"
@@ -64,7 +73,7 @@ const taskEditor = (task: DayTemplate['tasks'][number], index: number, count: nu
     </div>
   </li>`;
 
-export const renderEditTemplate = ({ weekday, draft, dirty }: EditTemplateProps): string => {
+export const renderEditTemplate = ({ weekday, draft, dirty, habits }: EditTemplateProps): string => {
   const day = draft[weekday] ?? { type: '', tasks: [] };
   const long = WEEKDAY_LONG[weekday] ?? '';
 
@@ -90,7 +99,7 @@ export const renderEditTemplate = ({ weekday, draft, dirty }: EditTemplateProps)
       </label>
 
       <ul class="edit-tasks">
-        ${day.tasks.map((t, i) => taskEditor(t, i, day.tasks.length)).join('')}
+        ${day.tasks.map((t, i) => taskEditor(t, i, day.tasks.length, habits)).join('')}
       </ul>
 
       ${day.tasks.length === 0 ? `<p class="empty">No tasks on ${esc(long)}s yet.</p>` : ''}

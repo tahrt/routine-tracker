@@ -71,15 +71,19 @@ export interface Settings {
   lastExportAt: string | null;
 }
 
-export interface RootData {
-  schemaVersion: number;
-  settings: Settings;
-  templates: TemplateVersion[];
-  days: Record<string, DayRecord>;
-}
-
 export interface Habit {
   id: HabitId;
   label: string;
   color: string;
+  /** Archived habits keep their history but are hidden from new task mappings. */
+  archived?: boolean;
+}
+
+export interface RootData {
+  schemaVersion: number;
+  settings: Settings;
+  /** Editable registry. Habit ids stay stable so renames never split history. */
+  habits: Habit[];
+  templates: TemplateVersion[];
+  days: Record<string, DayRecord>;
 }
