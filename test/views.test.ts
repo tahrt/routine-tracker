@@ -173,7 +173,27 @@ describe('renderTodayDashboard', () => {
     expect(html).toContain('Gym');
     expect(html).toContain('CONTINUE LEARNING');
     expect(html).toContain('How to Get and Evaluate Startup Ideas');
+    expect(html).toContain('today-learning__triangle');
+    expect(html).toContain('today-learning__rate">0%');
+    expect(html).toContain('today-learning__resume">Start');
     expect(html).toContain('data-mode="week"');
+  });
+
+  it('switches Continue Learning from Start to Resume after core progress exists', () => {
+    const first = LEARNING_PATHS[0]!.stages[0]!.lessons[0]!;
+    const html = renderTodayDashboard({
+      dateKey: TODAY,
+      record: undefined,
+      templates: TEMPLATES,
+      learningPaths: LEARNING_PATHS,
+      learningProgress: {
+        [first.id]: { lessonId: first.id, completedAt: NOW },
+      },
+      greeting: 'Good morning',
+      outOfSync: false,
+    });
+    expect(html).toContain('today-learning__resume">Resume');
+    expect(html).not.toContain('today-learning__rate">0%');
   });
 
   it('preserves the template sync controls for logged days', () => {

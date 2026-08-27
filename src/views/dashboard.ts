@@ -1,6 +1,6 @@
 import { formatLong, parseKey } from '../lib/date';
 import { previewTasks } from '../lib/day';
-import { nextCoreLesson } from '../lib/learning';
+import { formatLearningTime, nextCoreLesson, pathStats } from '../lib/learning';
 import { corePct, hasCoreTasks, pct } from '../lib/stats';
 import type { DayRecord, DayStatus, DayTask, LearningPath, LearningProgress, TemplateVersion } from '../types';
 import { cx, esc } from '../ui/dom';
@@ -70,6 +70,8 @@ export const renderTodayDashboard = ({
   const upNext = remaining.find((task) => task.core) ?? remaining[0];
   const continuePath = learningPaths.find((path) => nextCoreLesson(path, learningProgress));
   const nextLesson = continuePath ? nextCoreLesson(continuePath, learningProgress) : undefined;
+  const continueStats = continuePath ? pathStats(continuePath, learningProgress) : undefined;
+  const continueAction = continueStats && continueStats.completedLessons > 0 ? 'Resume' : 'Start';
   const isComplete = tasks.length > 0 && remaining.length === 0;
   const ringRate = hasCoreTasks(tasks) ? core : total;
 
@@ -148,16 +150,33 @@ export const renderTodayDashboard = ({
           : `<section class="up-next up-next--complete"><div class="up-next__label">TODAY COMPLETE</div><h2>Everything is done.</h2><p>Close the loop and enjoy the rest of the day.</p></section>`
       }
 
-      ${continuePath && nextLesson
-        ? `<button class="today-learning" type="button" data-action="open-learning-path" data-id="${esc(continuePath.id)}">
+      ${continuePath && nextLesson && continueStats
+        ? `<button class="today-learning" type="button" data-action="open-learning-path" data-id="${esc(continuePath.id)}"
+                   aria-label="${continueAction} learning: ${esc(nextLesson.title)}">
              <div class="today-learning__label">CONTINUE LEARNING</div>
-             <div class="today-learning__row">
-               <span class="today-learning__icon">◇</span>
-               <div>
-                 <strong>${esc(nextLesson.title)}</strong>
-                 <span>${esc(continuePath.title)} · ${nextLesson.durationMinutes} min</span>
+             <div class="today-learning__content">
+               <span class="today-learning__thumb" aria-hidden="true">
+                 <span class="today-learning__spark">✦</span>
+                 <span class="today-learning__book">◇</span>
+               </span>
+
+               <div class="today-learning__body">
+                 <strong class="today-learning__title">${esc(nextLesson.title)}</strong>
+                 <span class="today-learning__meta">${esc(continuePath.title)} · ${formatLearningTime(nextLesson.durationMinutes)}</span>
+
+                 <div class="today-learning__progress">
+                   <span class="today-learning__track" role="img"
+                         aria-label="${esc(continuePath.title)} ${continueStats.completionRate}% complete">
+                     <span style="width:${continueStats.completionRate}%"></span>
+                   </span>
+                   <span class="today-learning__rate">${continueStats.completionRate}%</span>
+                   <span class="today-learning__resume">${continueAction}</span>
+                 </div>
                </div>
-               <span class="today-learning__play">▶</span>
+
+               <span class="today-learning__cta" aria-hidden="true">
+                 <span class="today-learning__triangle"></span>
+               </span>
              </div>
            </button>`
         : ''
