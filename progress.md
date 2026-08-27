@@ -369,3 +369,21 @@ No storage schema change was required for this redesign.
 - `npm test` — 9/9 files, **130/130 tests passed**
 - `npm run build` — TypeScript + Vite + service-worker build passed
 - New view coverage verifies Today Up Next / Continue Learning / template-sync controls and Insights habit/learning aggregation
+
+
+## Continue Learning polish
+
+Released on 2026-08-27.
+
+- Commit: `b3acbfe` — `fix: polish continue learning card`
+- Fixed the iPhone rendering issue where the right-side play affordance could look like an empty rounded square by drawing the play triangle in CSS instead of relying on a font glyph.
+- Continue Learning now uses a stable three-column layout: learning thumbnail, lesson details/progress, and a circular CTA.
+- Shows real Learning Path completion percentage.
+- Shows **Start** when the path has no completed core lessons and **Resume** once progress exists.
+- Added a clearer progress bar and stronger title/meta hierarchy.
+- Added subtle teal depth/glow, responsive behavior for narrow iPhones, and small polish to Up Next, completed tasks, header decoration and active bottom navigation.
+- No schema/storage change.
+- Verification: 9/9 test files, **131/131 tests passed**.
+- Production build passed.
+- Deployed successfully to `gh-pages`.
+- Service-worker build id: `b3acbfe0cef9-20260827052911`.
