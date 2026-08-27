@@ -57,7 +57,8 @@ export const renderSettings = ({
 
   return `
     <section class="settings">
-      <h1 class="settings__title">Settings</h1>
+      <p class="day__date">CONTROL CENTER</p>
+      <h1 class="settings__title">More</h1>
 
       ${
         ephemeral

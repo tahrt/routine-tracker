@@ -51,6 +51,10 @@ export const renderWeek = ({ anchorKey, todayKey, records }: WeekViewProps): str
 
   return `
     <section class="week">
+      <div class="today-view-toggle today-view-toggle--week" role="group" aria-label="Today or week">
+        <button type="button" data-action="today-mode" data-mode="today">Today</button>
+        <button class="is-active" type="button" data-action="today-mode" data-mode="week">Week</button>
+      </div>
       <header class="week__head">
         <button class="navbtn" type="button" data-action="week-nav" data-delta="-1" aria-label="Previous week">‹</button>
         <div class="week__title">

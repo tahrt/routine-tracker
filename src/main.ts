@@ -1,6 +1,7 @@
 /** Entry point: styles, app start, service worker registration. */
 
 import './styles.css';
+import './redesign.css';
 import { startApp } from './app';
 import { setupPwaUpdates } from './pwa';
 

@@ -12,20 +12,23 @@ import { toggleTask } from './lib/stats';
 import { getStore, storageIsEphemeral } from './store';
 import type { DayRecord, DayStatus, WeekTemplate } from './types';
 import { toast } from './ui/dom';
+import { renderTodayDashboard } from './views/dashboard';
 import { renderDay } from './views/day';
 import { renderEditTemplate } from './views/editTemplate';
+import { renderInsights } from './views/insights';
 import { renderLearningOverview, renderLearningPath } from './views/learning';
-import { renderProgress } from './views/progress';
 import { renderSettings, type PendingImport } from './views/settings';
 import { renderWeek } from './views/week';
 
-type Tab = 'today' | 'week' | 'learn' | 'progress' | 'settings';
+type Tab = 'today' | 'learn' | 'insights' | 'more';
+type TodayMode = 'today' | 'week';
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
 
 interface AppState {
   tab: Tab;
-  /** Any date inside the week shown by the Week tab. */
+  todayMode: TodayMode;
+  /** Any date inside the week shown by the Week panel. */
   weekAnchor: string;
   /** Set when a specific day is opened from the Week view. */
   openDay: string | null;
@@ -53,6 +56,7 @@ export const startApp = (): (() => void) => {
 
   const state: AppState = {
     tab: 'today',
+    todayMode: 'today',
     weekAnchor: today(),
     openDay: null,
     learningPathId: null,
@@ -94,22 +98,32 @@ export const startApp = (): (() => void) => {
 
   /* ------------------------------------------------------------------- render */
 
-  const tabBar = (tab: Tab): string =>
-    (
-      [
-        ['today', 'Today'],
-        ['week', 'Week'],
-        ['learn', 'Learn'],
-        ['progress', 'Progress'],
-        ['settings', 'Settings'],
-      ] as [Tab, string][]
-    )
+  const tabBar = (tab: Tab): string => {
+    const items: Array<[Tab, string, string]> = [
+      ['today', 'Today', '⌂'],
+      ['learn', 'Learn', '◇'],
+      ['insights', 'Insights', '▥'],
+      ['more', 'More', '•••'],
+    ];
+    return items
       .map(
-        ([id, label]) =>
+        ([id, label, icon]) =>
           `<button type="button" class="tabbar__btn${tab === id ? ' is-active' : ''}" data-action="tab" data-tab="${id}"
-             aria-current="${tab === id}">${label}</button>`,
+             aria-current="${tab === id}">
+             <span class="tabbar__icon" aria-hidden="true">${icon}</span>
+             <span>${label}</span>
+           </button>`,
       )
       .join('');
+  };
+
+  const greeting = (): string => {
+    const { timezone } = store.getSettings();
+    const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: timezone, hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
 
   const render = (): void => {
     const root = document.getElementById('app');
@@ -121,28 +135,46 @@ export const startApp = (): (() => void) => {
     let body: string;
     if (state.editing) {
       body = renderEditTemplate({ ...state.editing, dirty: dirtyWeekdays(), habits });
-    } else if (state.tab === 'today' || state.openDay) {
-      const dateK = state.openDay ?? t;
-      const record = store.getDay(dateK);
+    } else if (state.openDay) {
+      const record = store.getDay(state.openDay);
       body = renderDay({
-        dateKey: dateK,
+        dateKey: state.openDay,
         todayKey: t,
         record,
         templates,
-        standalone: state.openDay !== null,
+        standalone: true,
         outOfSync:
           record !== undefined &&
-          !state.syncDismissed.has(dateK) &&
+          !state.syncDismissed.has(state.openDay) &&
           isOutOfSync(record, currentTemplate(templates, t)),
       });
-    } else if (state.tab === 'week') {
-      body = renderWeek({ anchorKey: state.weekAnchor, todayKey: t, records: recordsFor(weekKeys(parseKey(state.weekAnchor))) });
+    } else if (state.tab === 'today') {
+      body =
+        state.todayMode === 'week'
+          ? renderWeek({ anchorKey: state.weekAnchor, todayKey: t, records: recordsFor(weekKeys(parseKey(state.weekAnchor))) })
+          : renderTodayDashboard({
+              dateKey: t,
+              record: store.getDay(t),
+              templates,
+              learningPaths: LEARNING_PATHS,
+              learningProgress: store.getLearningProgress(),
+              greeting: greeting(),
+              outOfSync:
+                store.getDay(t) !== undefined &&
+                !state.syncDismissed.has(t) &&
+                isOutOfSync(store.getDay(t) as DayRecord, currentTemplate(templates, t)),
+            });
     } else if (state.tab === 'learn') {
       const progress = store.getLearningProgress();
       const path = state.learningPathId ? LEARNING_PATHS.find((candidate) => candidate.id === state.learningPathId) : undefined;
       body = path ? renderLearningPath(path, progress) : renderLearningOverview(LEARNING_PATHS, progress);
-    } else if (state.tab === 'progress') {
-      body = renderProgress({ todayKey: t, records: store.listDays({ to: t }), habits });
+    } else if (state.tab === 'insights') {
+      body = renderInsights({
+        todayKey: t,
+        records: store.listDays({ to: t }),
+        habits,
+        learningProgress: store.getLearningProgress(),
+      });
     } else {
       body = renderSettings({
         settings: store.getSettings(),
@@ -203,7 +235,10 @@ export const startApp = (): (() => void) => {
     state.openDay = null;
     state.learningPathId = null;
     state.editing = null;
-    if (tab === 'week') state.weekAnchor = today();
+    if (tab === 'today') {
+      state.todayMode = 'today';
+      state.weekAnchor = today();
+    }
     render();
   };
 
@@ -257,7 +292,17 @@ export const startApp = (): (() => void) => {
 
     back: () => {
       state.openDay = null;
-      state.tab = 'week';
+      state.tab = 'today';
+      state.todayMode = 'week';
+      render();
+    },
+
+    'today-mode': (el) => {
+      const mode = el.dataset.mode as TodayMode | undefined;
+      if (mode !== 'today' && mode !== 'week') return;
+      state.tab = 'today';
+      state.todayMode = mode;
+      if (mode === 'week') state.weekAnchor = today();
       render();
     },
 
@@ -436,7 +481,7 @@ export const startApp = (): (() => void) => {
     },
 
     export: downloadExport,
-    'goto-backup': () => openTab('settings'),
+    'goto-backup': () => openTab('more'),
     'dismiss-nudge': () => {
       state.nudgeDismissed = true;
       render();

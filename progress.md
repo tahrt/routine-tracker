@@ -41,7 +41,7 @@ This follows the data-honesty rule that missing records are **untracked**, not 0
 
 ## 2. Progress / streak UI
 
-A **Progress** tab exists in the main navigation.
+Lifetime habit statistics now feed the redesigned **Insights** tab rather than a separate Progress tab.
 
 Each activity card displays:
 
@@ -87,7 +87,7 @@ This gives us a clean separation between:
 - `src/views/progress.ts`
   - Progress view
 - `src/app.ts`
-  - Progress tab and historical record loading
+  - Insights navigation and historical record loading
 - `src/styles.css`
   - Progress cards, meters, streak statistics, and seven-day dots
 - `test/stats.test.ts`
@@ -202,7 +202,7 @@ Implemented on 2026-08-27.
 
 ### UX
 
-A new **Learn** tab sits alongside Today, Week, Progress and Settings.
+A **Learn** tab sits alongside Today, Insights and More. Week is now an in-page switch inside Today.
 
 The Learn overview shows:
 
@@ -276,3 +276,81 @@ After using/reviewing the seeded V1 videos, the curriculum can be expanded towar
 - Negotiation: roughly 5 hours
 
 Because lesson ids are stable, resource replacement and curriculum refinement can happen without losing completed learning history.
+
+
+## Momentum UI redesign
+
+Implemented and verified on 2026-08-27.
+
+Design direction: a darker, premium personal operating-system feel based on the approved three-screen mockup.
+
+### Navigation
+
+Bottom navigation is now deliberately reduced to four destinations:
+
+- **Today**
+- **Learn**
+- **Insights**
+- **More**
+
+The previous Week destination is preserved as a **Today / Week** in-page switch. Settings is presented as **More** because it now functions as the control center rather than a primary daily destination.
+
+### Today dashboard
+
+The default Today experience now includes:
+
+- Time-of-day greeting
+- Daily core-completion ring
+- Core task count
+- **Up Next** hero card with one-tap completion
+- **Continue Learning** card driven by the Learning Path state
+- Compact Track / Rest / Skip controls
+- Rest-of-day list with reduced visual weight for completed tasks
+- Existing template-sync warning and Update/Keep-as-logged actions
+- Direct access to the Week panel without adding a fifth bottom-nav item
+
+### Insights
+
+The previous habit-progress destination is redesigned into an actionable dashboard showing:
+
+- Current-week consistency
+- Comparison with the previous week
+- Best current streak
+- Lifetime habit completion bars
+- Longest streak
+- Learning-path completion
+- A lightweight Momentum state: Ready / Strong / Building / Reset
+
+The underlying habit-history rules are unchanged; this is a presentation/aggregation redesign.
+
+### Learn visual refresh
+
+Learning Path data and behavior are unchanged, but the page now uses stronger curriculum cards, path-specific accents and clearer hierarchy that matches the approved mockup.
+
+### Architecture / safety
+
+No storage schema change was required for this redesign.
+
+- Existing schema remains v4
+- Existing `rt:day:*`, habits, templates and `rt:learning:progress` are untouched
+- Week history, retroactive logging, rest/skip semantics, template sync, backup/import and learning completion remain supported
+- Visual overrides live in `src/redesign.css` so the existing functional styles remain isolated and easy to reason about
+
+### Main redesign files
+
+- `src/views/dashboard.ts`
+- `src/views/insights.ts`
+- `src/views/learning.ts`
+- `src/views/week.ts`
+- `src/views/settings.ts`
+- `src/redesign.css`
+- `src/app.ts`
+- `src/main.ts`
+- `test/app.test.ts`
+- `test/views.test.ts`
+
+### Verification
+
+- `npm test` — 9/9 files, **130/130 tests passed**
+- `npm run build` — TypeScript + Vite + service-worker build passed
+- New view coverage verifies Today Up Next / Continue Learning / template-sync controls and Insights habit/learning aggregation

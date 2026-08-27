@@ -5,7 +5,9 @@ import { LEARNING_PATHS } from '../src/config/learning';
 import { DEFAULT_SCHEDULE, HABITS } from '../src/config/schedule';
 import { materializeDay } from '../src/lib/day';
 import type { TemplateVersion } from '../src/types';
+import { renderTodayDashboard } from '../src/views/dashboard';
 import { renderDay } from '../src/views/day';
+import { renderInsights } from '../src/views/insights';
 import { renderLearningOverview, renderLearningPath } from '../src/views/learning';
 import { renderProgress } from '../src/views/progress';
 import { renderWeek } from '../src/views/week';
@@ -152,5 +154,62 @@ describe('renderLearning', () => {
     expect(html).toContain('aria-pressed="true"');
     expect(html).toContain('youtube.com');
     expect(html).toContain('Recommended');
+  });
+});
+
+
+describe('renderTodayDashboard', () => {
+  it('shows the next core task and the next learning lesson', () => {
+    const html = renderTodayDashboard({
+      dateKey: TODAY,
+      record: undefined,
+      templates: TEMPLATES,
+      learningPaths: LEARNING_PATHS,
+      learningProgress: {},
+      greeting: 'Good morning',
+      outOfSync: false,
+    });
+    expect(html).toContain('UP NEXT');
+    expect(html).toContain('Gym');
+    expect(html).toContain('CONTINUE LEARNING');
+    expect(html).toContain('How to Get and Evaluate Startup Ideas');
+    expect(html).toContain('data-mode="week"');
+  });
+
+  it('preserves the template sync controls for logged days', () => {
+    const html = renderTodayDashboard({
+      dateKey: TODAY,
+      record: materializeDay(TODAY, TEMPLATES, NOW, TODAY),
+      templates: TEMPLATES,
+      learningPaths: LEARNING_PATHS,
+      learningProgress: {},
+      greeting: 'Good morning',
+      outOfSync: true,
+    });
+    expect(html).toContain('still shows the old list');
+    expect(html).toContain('data-action="sync-template"');
+    expect(html).toContain('data-action="sync-dismiss"');
+  });
+});
+
+describe('renderInsights', () => {
+  it('combines weekly consistency, habits and learning progress', () => {
+    const monday = materializeDay(TODAY, TEMPLATES, NOW, TODAY);
+    const doneGym = {
+      ...monday,
+      tasks: monday.tasks.map((task) => (task.habit === 'gym' ? { ...task, done: true } : task)),
+    };
+    const html = renderInsights({
+      todayKey: TODAY,
+      records: [doneGym],
+      habits: HABITS,
+      learningProgress: {},
+    });
+    expect(html).toContain('Insights');
+    expect(html).toContain('HABITS OVERVIEW');
+    expect(html).toContain('Gym');
+    expect(html).toContain('100%');
+    expect(html).toContain('LEARNING PROGRESS');
+    expect(html).toContain('MOMENTUM');
   });
 });

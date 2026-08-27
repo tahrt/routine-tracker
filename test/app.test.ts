@@ -44,8 +44,8 @@ describe('app', () => {
   it('renders today with the seeded template and a tab bar', () => {
     boot();
     expect(app().textContent).toContain('WFH · Gym AM');
-    expect(app().querySelectorAll('.tabbar__btn')).toHaveLength(5);
-    expect(app().querySelector('.tabbar__btn.is-active')?.textContent?.trim()).toBe('Today');
+    expect(app().querySelectorAll('.tabbar__btn')).toHaveLength(4);
+    expect(app().querySelector('.tabbar__btn.is-active')?.textContent).toContain('Today');
   });
 
   it('creates a day record on the first tap and persists the toggle', () => {
@@ -78,7 +78,7 @@ describe('app', () => {
 
   it('navigates to the week view and back into a past day', () => {
     boot();
-    click(app().querySelector('[data-action="tab"][data-tab="week"]'));
+    click(app().querySelector('[data-action="today-mode"][data-mode="week"]'));
     expect(app().textContent).toContain('24 Aug – 30 Aug 2026');
 
     click(app().querySelector('[data-action="week-nav"][data-delta="-1"]'));
@@ -97,7 +97,7 @@ describe('app', () => {
 
   it('will not step past the current week', () => {
     boot();
-    click(app().querySelector('[data-action="tab"][data-tab="week"]'));
+    click(app().querySelector('[data-action="today-mode"][data-mode="week"]'));
     const next = app().querySelector('[data-action="week-nav"][data-delta="1"]');
     expect((next as HTMLButtonElement).disabled).toBe(true);
     click(next);
@@ -107,7 +107,7 @@ describe('app', () => {
   it('shows a week average that ignores rest days', () => {
     boot();
     click(app().querySelector('[data-action="toggle-task"][data-id="gym"]')); // 1 of 5 core tasks
-    click(app().querySelector('[data-action="tab"][data-tab="week"]'));
+    click(app().querySelector('[data-action="today-mode"][data-mode="week"]'));
     expect(app().textContent).toContain('1 of 1 day tracked');
 
     click(app().querySelector('[data-action="open-day"][data-date="2026-08-24"]'));
@@ -117,19 +117,19 @@ describe('app', () => {
     expect(app().textContent).toContain('0 of 1 day tracked');
   });
 
-  it('opens Progress and reflects lifetime core-activity completion', () => {
+  it('opens Insights and reflects routine consistency', () => {
     boot();
     click(app().querySelector('[data-action="toggle-task"][data-id="gym"]'));
-    click(app().querySelector('[data-action="tab"][data-tab="progress"]'));
+    click(app().querySelector('[data-action="tab"][data-tab="insights"]'));
 
-    expect(app().querySelector('.tabbar__btn.is-active')?.textContent?.trim()).toBe('Progress');
-    const gymCard = [...app().querySelectorAll<HTMLElement>('.progress-card')].find((el) =>
+    expect(app().querySelector('.tabbar__btn.is-active')?.textContent?.trim()).toContain('Insights');
+    expect(app().textContent).toContain('HABITS OVERVIEW');
+    const gym = [...app().querySelectorAll<HTMLElement>('.insight-habit')].find((el) =>
       el.textContent?.includes('Gym'),
     );
-    expect(gymCard).toBeDefined();
-    expect(gymCard?.textContent).toContain('1 of 1 tracked day');
-    expect(gymCard?.textContent).toContain('100%');
-    expect(gymCard?.textContent).toContain('1 day current');
+    expect(gym).toBeDefined();
+    expect(gym?.textContent).toContain('100%');
+    expect(app().textContent).toContain('best current');
   });
 
   it('opens Learn, persists a lesson completion, and advances progress', () => {
@@ -157,7 +157,7 @@ describe('app', () => {
     Object.defineProperty(window.URL, 'createObjectURL', { value: createURL, writable: true });
     Object.defineProperty(window.URL, 'revokeObjectURL', { value: vi.fn(), writable: true });
     boot();
-    click(app().querySelector('[data-action="tab"][data-tab="settings"]'));
+    click(app().querySelector('[data-action="tab"][data-tab="more"]'));
     click(app().querySelector('[data-action="export"]'));
     expect(createURL).toHaveBeenCalled();
     expect(JSON.parse(window.localStorage.getItem('rt:meta') as string).settings.lastExportAt).not.toBeNull();
@@ -166,7 +166,7 @@ describe('app', () => {
   it('requires the typed word before erasing', () => {
     boot();
     click(app().querySelector('[data-action="toggle-task"][data-id="gym"]'));
-    click(app().querySelector('[data-action="tab"][data-tab="settings"]'));
+    click(app().querySelector('[data-action="tab"][data-tab="more"]'));
     click(app().querySelector('[data-action="reset-arm"]'));
 
     (document.getElementById('reset-confirm') as HTMLInputElement).value = 'nope';
@@ -327,7 +327,7 @@ describe('template editing', () => {
   it('never rewrites a day logged before the edit', () => {
     boot();
     // Log last Monday, then change Mondays.
-    click(app().querySelector('[data-action="tab"][data-tab="week"]'));
+    click(app().querySelector('[data-action="today-mode"][data-mode="week"]'));
     click(app().querySelector('[data-action="week-nav"][data-delta="-1"]'));
     click(app().querySelector('[data-action="open-day"][data-date="2026-08-17"]'));
     click(app().querySelector('[data-action="toggle-task"][data-id="gym"]'));
@@ -345,7 +345,7 @@ describe('template editing', () => {
 
   it('edits the weekday of the day opened from the week view, not today', () => {
     boot();
-    click(app().querySelector('[data-action="tab"][data-tab="week"]'));
+    click(app().querySelector('[data-action="today-mode"][data-mode="week"]'));
     click(app().querySelector('[data-action="week-nav"][data-delta="-1"]'));
     click(app().querySelector('[data-action="open-day"][data-date="2026-08-19"]'));
     openEditor();
@@ -380,9 +380,9 @@ describe('editing other weekdays', () => {
     expect(names()).toContain('Content creation batch');
   });
 
-  it('is reachable from Settings without visiting a day', () => {
+  it('is reachable from More without visiting a day', () => {
     boot();
-    click(app().querySelector('[data-action="tab"][data-tab="settings"]'));
+    click(app().querySelector('[data-action="tab"][data-tab="more"]'));
     click(app().querySelector('[data-action="edit-template"]'));
     expect(app().textContent).toContain('Edit tasks');
     pickDay(4);
@@ -435,7 +435,7 @@ describe('editing other weekdays', () => {
   it('leaves other weekdays and their logged performance untouched', () => {
     boot();
     // Log last Wednesday fully, and note its percentage.
-    click(app().querySelector('[data-action="tab"][data-tab="week"]'));
+    click(app().querySelector('[data-action="today-mode"][data-mode="week"]'));
     click(app().querySelector('[data-action="week-nav"][data-delta="-1"]'));
     click(app().querySelector('[data-action="open-day"][data-date="2026-08-19"]'));
     for (const btn of [...app().querySelectorAll('[data-action="toggle-task"]')]) click(btn);

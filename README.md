@@ -16,14 +16,14 @@ npm run icons    # regenerate PWA icons (only after changing the mark)
 
 ## What it does
 
-- **Today** — the weekday's checklist, tap to complete, live total % and core %.
-- **Week** — Mon–Sun skyline. Past days are tappable so a forgotten day can be logged; future days are inert; Next stops at the current week.
+- **Today** — premium dashboard with daily core progress, Up Next, Continue Learning, routine checklist, and an embedded Today/Week switch.
+- **Week** — available inside Today; Mon–Sun history remains tappable for retroactive logging.
 - **Learn** — structured Business, AI Agent and Negotiation paths with stages, video resources, Core/Recommended priorities, time-weighted completion and Continue Learning.
-- **Progress** — lifetime completion and current/best streaks for stable habit ids.
+- **Insights** — weekly consistency, habit completion, streaks, learning progress and a simple Momentum status.
 - **Day status** — `active` / `rest` / `skipped`. Rest days are excluded from the week average.
 - **Edit tasks** — edit any weekday while historical day snapshots remain frozen.
 - **Habits** — stable ids let labels/schedules change without resetting Progress history.
-- **Settings** — export/import JSON backups, habit management, home timezone, day cutoff hour, raw-data viewer, reset.
+- **More** — export/import JSON backups, weekly schedule editing, habit management, home timezone, day cutoff hour, raw-data viewer, reset.
 - **Offline** — installable Home Screen web app/PWA with a safe in-place update flow.
 
 ## The parts that matter for long-term use

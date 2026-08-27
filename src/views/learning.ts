@@ -8,6 +8,12 @@ import {
 import type { LearningLesson, LearningPath, LearningProgress } from '../types';
 import { esc } from '../ui/dom';
 
+const pathIcon = (id: string): string => {
+  if (id === 'business') return '↗';
+  if (id === 'ai-agents') return '✦';
+  return '◆';
+};
+
 const priorityLabel = (priority: LearningLesson['priority']): string => {
   if (priority === 'core') return 'Core';
   if (priority === 'recommended') return 'Recommended';
@@ -61,9 +67,9 @@ export const renderLearningOverview = (
   return `
     <section class="learn">
       <header class="learn__head">
-        <p class="day__date">LEARNING PATH</p>
+        <p class="day__date">CORE CURRICULUM</p>
         <h1 class="day__type">Learn</h1>
-        <p class="progress__intro">Finish the core path in order. Recommended and optional resources do not reduce your core completion.</p>
+        <p class="progress__intro">One clear path at a time. Core lessons drive completion; deeper resources stay available when you want them.</p>
       </header>
 
       ${continuePath && next
@@ -82,8 +88,9 @@ export const renderLearningOverview = (
           return `
             <button class="learn-path-card" type="button" data-action="open-learning-path" data-id="${esc(path.id)}">
               <div class="learn-path-card__top">
-                <div>
-                  <h2>${esc(path.title)}</h2>
+                <span class="learn-path-card__icon" aria-hidden="true">${pathIcon(path.id)}</span>
+                <div class="learn-path-card__copy">
+                  <div class="learn-path-card__titleline"><h2>${esc(path.title)}</h2><span class="learn-tag learn-tag--core">Core</span></div>
                   <p>${esc(path.subtitle)}</p>
                 </div>
                 <span class="learn-path-card__rate">${stats.completionRate}<span class="meter__pct">%</span></span>
