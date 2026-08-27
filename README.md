@@ -1,6 +1,6 @@
 # Routine Tracker — v1.0
 
-Personal daily/weekly routine tracker. Built to a written spec (`routine-tracker-spec.md`), which is kept out of this repo.
+Personal daily/weekly routine tracker.
 
 Vite + vanilla TypeScript + `localStorage`. No backend, no accounts, no build-time secrets.
 
@@ -9,44 +9,59 @@ Vite + vanilla TypeScript + `localStorage`. No backend, no accounts, no build-ti
 ```bash
 npm install
 npm run dev      # http://localhost:5173
-npm test         # 88 tests
-npm run build    # typecheck + production build into dist/
+npm test         # full Vitest suite
+npm run build    # typecheck + Vite build + versioned service worker
 npm run icons    # regenerate PWA icons (only after changing the mark)
 ```
 
-## What v1.0 does
+## What it does
 
 - **Today** — the weekday's checklist, tap to complete, live total % and core %.
 - **Week** — Mon–Sun skyline. Past days are tappable so a forgotten day can be logged; future days are inert; Next stops at the current week.
-- **Day status** — `active` / `rest` / `skipped`. Rest days are excluded from the week average, so a holiday doesn't read as a collapse.
-- **Edit tasks** — pick any weekday from the editor's day strip and add, rename, retime, reorder, delete or flag tasks as core. Edits across several weekdays save together as one template version, effective today; days already logged keep the list they were logged with, with an opt-in "update this day" prompt.
-- **Settings** — export/import JSON backups, home timezone, day cutoff hour, raw-data viewer, reset.
-- **Offline** — installable PWA, opens and works with no network.
+- **Progress** — lifetime completion and current/best streaks for stable habit ids.
+- **Day status** — `active` / `rest` / `skipped`. Rest days are excluded from the week average.
+- **Edit tasks** — edit any weekday while historical day snapshots remain frozen.
+- **Habits** — stable ids let labels/schedules change without resetting Progress history.
+- **Settings** — export/import JSON backups, habit management, home timezone, day cutoff hour, raw-data viewer, reset.
+- **Offline** — installable Home Screen web app/PWA with a safe in-place update flow.
 
 ## The parts that matter for long-term use
 
-**Date handling** (`src/lib/date.ts`) — date keys are built from local calendar parts, never `toISOString()`; the logical day starts at 04:00 so a 00:20 tap still counts for the evening that's still in progress; wall-clock time is read in the configured home timezone so travel doesn't shift history. This is the only code where a bug corrupts the past, so it is the most heavily tested.
+**Date handling** (`src/lib/date.ts`) — date keys are built from local calendar parts, never `toISOString()`; the logical day starts at the configured cutoff so late-night taps can still count for the intended day; wall-clock time is read in the configured home timezone so travel does not shift history.
 
 **Day snapshots** (`src/lib/day.ts`) — a day record is created lazily on first interaction and freezes the tasks as they were that day. Editing a template later never rewrites history; percentages for a past day are computed from that day's own snapshot.
 
+**Stable habit identity** — task names and schedules are editable, but progress is keyed by the persistent habit id. Renaming a habit does not split its history.
+
 **Schema versioning** (`src/store/migrations.ts`) — every blob carries `schemaVersion`, migrations run on load and on import, and the pre-migration data is kept under `rt:backup:preMigration:v{n}`.
 
-**Storage** (`src/store/`) — one `rt:day:YYYY-MM-DD` key per day so a checkbox tap is an O(1) write, plus an `rt:index` cache that is rebuilt from the real keys if it ever diverges. All app code goes through the `Store` interface in `src/store/localStore.ts`, so swapping in a Supabase backend later means writing one module, not touching the views.
+**Storage** (`src/store/`) — one `rt:day:YYYY-MM-DD` key per day so a checkbox tap is an O(1) write, plus an `rt:index` cache that is rebuilt from the real keys if it ever diverges. All app code goes through the `Store` interface.
 
-**Backups** — `localStorage` is one cache clear from empty. Export writes a full JSON file; import validates, migrates, shows a diff, and requires confirmation. A nudge appears if you haven't exported in 30 days.
+**Backups** — `localStorage` can still be lost if the user clears site data, removes the Home Screen app/storage container, or the device is lost. Export writes a full JSON file; import validates, migrates, previews changes, and requires confirmation.
 
-## Deferred (spec §11)
+## Updating the iPhone Home Screen app safely
 
-v1.1 streaks · daily note · task weights UI. v1.2 ad-hoc "just for today" tasks · history trends. v2.0 Supabase sync + push reminders.
+Do **not** delete the existing Home Screen icon just to get a new release. The saved routine history belongs to that installed web app's local storage container.
 
-`src/config/schedule.ts` only seeds the templates on first run; after that they live in storage and are edited in the app.
+Normal release flow:
+
+1. Build and deploy a new version to the same URL.
+2. Keep using the existing **Routine** icon on the iPhone Home Screen.
+3. The app checks for a new service worker when it opens, returns to the foreground, and periodically while open.
+4. When a release is ready, a **Routine update ready** banner appears.
+5. Tap **Update now**. The new worker activates, takes control, then the app reloads.
+6. Existing `rt:*` local data is not modified by the update mechanism.
+
+The production build stamps `dist/sw.js` with a unique build id through `scripts/build-sw.mjs`. Service-worker registration uses `updateViaCache: 'none'`, so a cached worker script cannot hide a new deployment.
+
+When a future release changes the data schema, add a migration instead of resetting storage.
 
 ## Deploying
 
 ```bash
-npm run deploy   # build, then force-push dist/ to the gh-pages branch
+npm run deploy   # build, then publish dist/ to the gh-pages branch
 ```
 
-`vite.config.ts` uses a relative `base`, so the build works from a repo subpath.
+`vite.config.ts` uses a relative `base`, so the build works from the GitHub Pages repo subpath.
 
-Note that a public URL makes the app public — the data still stays in each visitor's own browser, so that is fine for v1.0. It stops being fine the moment sync is added: see spec §7.3 before wiring up Supabase.
+A public URL makes the app public; the user's routine data still stays in that browser/Home Screen app until server sync is introduced.
