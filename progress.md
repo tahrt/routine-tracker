@@ -10,7 +10,29 @@ The routine tracker now has three related pieces of long-term tracking functiona
 2. **Editable habits and weekly tasks without breaking historical progress**
 3. **Learning Path tracking for Business, AI Agents and Negotiation**
 
-The app is on `main`, and the latest code commit is already pushed to `origin/main`.
+The app is on `main`, the working tree is clean, and `main` is up to date with `origin/main`.
+
+## Latest release snapshot
+
+Current as of 2026-08-27:
+
+- Latest product change: `b3acbfe` — `fix: polish continue learning card`
+- Latest documentation commit: `8ed8f6d` — `docs: record continue learning polish`
+- Both commits are pushed to `origin/main`
+- Latest deployed service-worker build: `b3acbfe0cef9-20260827052911`
+- GitHub Pages publish completed successfully
+- Verification: **9/9 test files, 131/131 tests passed**
+- Production TypeScript/Vite/service-worker build passed
+- Storage schema remains **v4**; this UI polish did not require a migration
+- Existing routine history, habits, templates and Learning Path progress remain untouched
+- iPhone Home Screen users should update through the existing **Routine** icon via the Safe Update flow; do not delete/re-add the app just to receive this release
+
+Current product navigation:
+
+- **Today** — daily momentum dashboard + Today/Week switch
+- **Learn** — structured Business, AI Agent and Negotiation learning paths
+- **Insights** — consistency, streaks, habit completion, learning progress and Momentum
+- **More** — schedule editing, habits, backup/import, settings and data controls
 
 ## 1. Lifetime core activity completion
 
@@ -95,7 +117,7 @@ This gives us a clean separation between:
 - `test/views.test.ts`
   - Progress-view rendering coverage
 - `test/app.test.ts`
-  - Progress-tab integration coverage
+  - Today / Insights / Learning integration coverage
 
 ### Persistent editable habits
 
