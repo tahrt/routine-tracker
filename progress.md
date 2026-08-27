@@ -153,6 +153,21 @@ Safe Update release status on 2026-08-27:
 
 The external web fetch used for an additional live-content check was unavailable in this session, so deployment status is based on the successful GitHub Pages publish command rather than a second HTTP fetch.
 
+## Learning Path V1 release status
+
+Released on 2026-08-27.
+
+- Feature commit: `f8bb05a` — `feat: add learning paths`
+- Pushed successfully to `origin/main`
+- `npm run deploy` completed successfully and published the build to the `gh-pages` branch
+- Deployed service-worker build id: `f8bb05a6c295-20260827045735`
+- Release verification before deploy: 9/9 test files, 127/127 tests passed
+- Production TypeScript/Vite build passed
+- Existing schema v3 data migrates to v4 without rewriting routine history
+- Existing iPhone Home Screen installations should receive this release through the Safe Update flow; no delete/re-add is required
+
+A second external HTTP fetch of the GitHub Pages URL was unavailable in this session, so live publication status is grounded in the successful `npm run deploy` / `gh-pages` publish result.
+
 ## Safe Update System for the iPhone Home Screen app
 
 Implemented on 2026-08-27 so future releases can update the existing installed Home Screen app without deleting it or resetting local data.
