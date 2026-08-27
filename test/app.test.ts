@@ -44,7 +44,7 @@ describe('app', () => {
   it('renders today with the seeded template and a tab bar', () => {
     boot();
     expect(app().textContent).toContain('WFH · Gym AM');
-    expect(app().querySelectorAll('.tabbar__btn')).toHaveLength(4);
+    expect(app().querySelectorAll('.tabbar__btn')).toHaveLength(5);
     expect(app().querySelector('.tabbar__btn.is-active')?.textContent?.trim()).toBe('Today');
   });
 
@@ -130,6 +130,26 @@ describe('app', () => {
     expect(gymCard?.textContent).toContain('1 of 1 tracked day');
     expect(gymCard?.textContent).toContain('100%');
     expect(gymCard?.textContent).toContain('1 day current');
+  });
+
+  it('opens Learn, persists a lesson completion, and advances progress', () => {
+    boot();
+    click(app().querySelector('[data-action="tab"][data-tab="learn"]'));
+    expect(app().textContent).toContain('Start & Grow a Business');
+    expect(app().textContent).toContain('CONTINUE LEARNING');
+
+    click(app().querySelector('[data-action="open-learning-path"][data-id="business"]'));
+    expect(app().textContent).toContain('Stage 1 · Foundations');
+    const first = app().querySelector('[data-action="toggle-learning-lesson"][data-id="business-ideas-01"]');
+    click(first);
+
+    const progress = JSON.parse(window.localStorage.getItem('rt:learning:progress') as string);
+    expect(progress['business-ideas-01']).toBeDefined();
+    expect(app().querySelector('[data-id="business-ideas-01"]')?.getAttribute('aria-pressed')).toBe('true');
+
+    click(app().querySelector('[data-action="toggle-learning-lesson"][data-id="business-ideas-01"]'));
+    const undone = JSON.parse(window.localStorage.getItem('rt:learning:progress') as string);
+    expect(undone['business-ideas-01']).toBeUndefined();
   });
 
   it('exports a backup and records when it happened', () => {

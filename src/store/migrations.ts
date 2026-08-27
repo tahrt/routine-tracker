@@ -10,7 +10,7 @@ import { resolveTask } from '../lib/day';
 import { isDateKey, parseKey } from '../lib/date';
 import type { DayRecord, DayTask, Habit, RootData, TemplateVersion, WeekTemplate } from '../types';
 
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 type Migration = (data: any) => any;
 
@@ -101,12 +101,24 @@ const v2_to_v3: Migration = (data) => {
     ...data,
     schemaVersion: 3,
     habits: [...habits.values()],
-  } satisfies RootData;
+  };
 };
+
+/**
+ * v4 — add personal Learning Path completion state. Curriculum content itself
+ * ships with the app, so replacing a resource later does not require rewriting
+ * user storage; stable lesson ids keep completion attached to the learning goal.
+ */
+const v3_to_v4: Migration = (data) => ({
+  ...data,
+  schemaVersion: 4,
+  learningProgress: data?.learningProgress ?? {},
+}) satisfies RootData;
 
 const MIGRATIONS: Record<number, Migration> = {
   1: v1_to_v2,
   2: v2_to_v3,
+  3: v3_to_v4,
 };
 
 export const needsMigration = (data: { schemaVersion?: number }): boolean =>

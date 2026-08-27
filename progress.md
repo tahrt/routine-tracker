@@ -4,10 +4,11 @@ Last updated: 2026-08-27
 
 ## Current state
 
-The routine tracker now has two related pieces of long-term tracking functionality:
+The routine tracker now has three related pieces of long-term tracking functionality:
 
 1. **Progress / streak tracking for core activities**
 2. **Editable habits and weekly tasks without breaking historical progress**
+3. **Learning Path tracking for Business, AI Agents and Negotiation**
 
 The app is on `main`, and the latest code commit is already pushed to `origin/main`.
 
@@ -130,6 +131,14 @@ Fresh verification on 2026-08-27 after the Safe Update work:
 - Built service worker precached the production HTML, manifest, icons, and hashed JS/CSS assets
 - PWA test verifies the update flow leaves existing `rt:day:*` localStorage data untouched
 
+Fresh verification on 2026-08-27 after Learning Path V1:
+
+- `npm test` — passed: 9/9 test files, 127/127 tests
+- `npm run build` — passed: TypeScript typecheck, Vite production build, and service-worker generation
+- Migration coverage verifies schema v3 → v4 adds learning progress without changing existing routine data
+- Store coverage verifies lesson completion persists, exports/imports, and can be undone
+- App coverage verifies the Learn tab, path navigation, completion and undo flow
+
 ## Git / deployment status
 
 Safe Update release status on 2026-08-27:
@@ -172,20 +181,83 @@ Files added/changed:
 - `package.json`
 - `README.md`
 
-## Next feature under discussion: Learning Path
+## Learning Path V1
 
-We are considering adding a structured **Learning Path** system to the routine tracker.
+Implemented on 2026-08-27.
 
-Initial learning sets:
+### UX
+
+A new **Learn** tab sits alongside Today, Week, Progress and Settings.
+
+The Learn overview shows:
+
+- Continue Learning
+- One card per learning set
+- Core completion percentage
+- Completed / total core lessons
+- Completed / total core learning time
+- Next core lesson
+
+Opening a set shows:
+
+- Stage-by-stage curriculum
+- Core / Recommended / Optional priority labels
+- Resource duration
+- External resource link
+- Mark complete / undo
+- Set-level and stage-level progress
+- Core time learned and remaining
+- Up Next lesson
+
+### Initial learning sets
 
 1. **Start & Grow a Business**
-2. **Build a Great & Reliable AI Agent Team**
+2. **Great & Reliable AI Agent Team**
 3. **Business Negotiation Strategy**
 
-Current curriculum target for the first core version:
+The first seeded resource list is intentionally the V1 shortlist we were already reviewing. Current core video time in the app is smaller than the eventual target curriculum and can be expanded after resource review.
 
-- Business: roughly 7–8 hours
+### Data model
+
+Curriculum content is code-owned in `src/config/learning.ts`.
+
+Personal completion is stored separately under:
+
+- `rt:learning:progress`
+
+This is intentional. A future release can replace a video title, URL or duration while keeping the same stable lesson id, so the user's completion does not reset.
+
+Schema is now **v4**:
+
+- v3 → v4 adds `learningProgress`
+- Existing settings, habits, templates and day snapshots are preserved
+- Pre-migration backup behavior remains in place
+- Export/import includes learning completion
+- Current curriculum itself is not duplicated into user storage
+
+### Main Learning Path files
+
+- `src/config/learning.ts`
+- `src/lib/learning.ts`
+- `src/views/learning.ts`
+- `src/types.ts`
+- `src/store/localStore.ts`
+- `src/store/migrations.ts`
+- `src/app.ts`
+- `src/styles.css`
+- `src/views/settings.ts`
+- `test/learning.test.ts`
+- `test/app.test.ts`
+- `test/store.test.ts`
+- `test/migrations.test.ts`
+- `test/views.test.ts`
+
+### Future curriculum work
+
+After using/reviewing the seeded V1 videos, the curriculum can be expanded toward the earlier target:
+
+- Business: roughly 7–8 hours of core material
 - AI Agent: roughly 7–8 hours plus hands-on practice
 - Negotiation: roughly 5 hours
 
-The Learning Path implementation has not started yet. The next step is to decide the data model and UX so learning progress can work alongside daily routines without conflating habit streaks with course completion.
+Because lesson ids are stable, resource replacement and curriculum refinement can happen without losing completed learning history.

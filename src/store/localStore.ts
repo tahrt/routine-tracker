@@ -13,7 +13,7 @@
 
 import { DEFAULT_HABITS, DEFAULT_SCHEDULE, DEFAULT_SETTINGS } from '../config/schedule';
 import { isDateKey } from '../lib/date';
-import type { DayRecord, Habit, RootData, Settings, TemplateVersion } from '../types';
+import type { DayRecord, Habit, LearningProgress, RootData, Settings, TemplateVersion } from '../types';
 import type { KV } from './kv';
 import { CURRENT_SCHEMA_VERSION, migrate, needsMigration, validateImport } from './migrations';
 
@@ -21,6 +21,7 @@ const K = {
   meta: 'rt:meta',
   habits: 'rt:habits',
   templates: 'rt:templates',
+  learningProgress: 'rt:learning:progress',
   index: 'rt:index',
   day: (d: string) => `rt:day:${d}`,
   backupMigration: (v: number) => `rt:backup:preMigration:v${v}`,
@@ -39,6 +40,7 @@ export interface ImportSummary {
   overwritten: number;
   unchanged: number;
   templates: number;
+  learningCompleted: number;
 }
 
 export interface Store {
@@ -54,6 +56,9 @@ export interface Store {
   addHabit(label: string): Habit;
   setHabitLabel(id: string, label: string): Habit | undefined;
   setHabitArchived(id: string, archived: boolean): Habit | undefined;
+  getLearningProgress(): LearningProgress;
+  setLearningLessonCompleted(lessonId: string, completed: boolean, nowIso: string): LearningProgress;
+  clearLearningProgress(): void;
   getSettings(): Settings;
   setSettings(patch: Partial<Settings>): Settings;
   exportAll(): RootData;
@@ -97,6 +102,8 @@ export const createLocalStore = (kv: KV): Store => {
   const writeTemplates = (t: TemplateVersion[]): void => kv.set(K.templates, JSON.stringify(t));
   const readHabits = (): Habit[] => parse<Habit[]>(kv.get(K.habits), []);
   const writeHabits = (h: readonly Habit[]): void => kv.set(K.habits, JSON.stringify(h));
+  const readLearningProgress = (): LearningProgress => parse<LearningProgress>(kv.get(K.learningProgress), {});
+  const writeLearningProgress = (p: LearningProgress): void => kv.set(K.learningProgress, JSON.stringify(p));
 
   const readDay = (dateK: string): DayRecord | undefined => {
     const raw = kv.get(K.day(dateK));
@@ -117,6 +124,7 @@ export const createLocalStore = (kv: KV): Store => {
       habits: readHabits(),
       templates: readTemplates(),
       days,
+      learningProgress: readLearningProgress(),
     };
   };
 
@@ -126,6 +134,7 @@ export const createLocalStore = (kv: KV): Store => {
     writeMeta({ schemaVersion: root.schemaVersion, settings: { ...DEFAULT_SETTINGS, ...root.settings } });
     writeHabits(root.habits?.length ? root.habits : structuredClone(DEFAULT_HABITS));
     writeTemplates(root.templates);
+    writeLearningProgress(root.learningProgress ?? {});
     const keys = Object.keys(root.days).filter(isDateKey).sort();
     for (const k of keys) kv.set(K.day(k), JSON.stringify(root.days[k]));
     writeIndex(keys);
@@ -137,6 +146,7 @@ export const createLocalStore = (kv: KV): Store => {
     writeTemplates([
       { version: 1, effectiveFrom: todayKey, createdAt: nowIso, days: structuredClone(DEFAULT_SCHEDULE) },
     ]);
+    writeLearningProgress({});
     writeIndex([]);
   };
 
@@ -244,6 +254,22 @@ export const createLocalStore = (kv: KV): Store => {
       return next;
     },
 
+    getLearningProgress: readLearningProgress,
+
+    setLearningLessonCompleted(lessonId, completed, nowIso) {
+      const progress = readLearningProgress();
+      if (completed) progress[lessonId] = { lessonId, completedAt: nowIso };
+      else delete progress[lessonId];
+      writeLearningProgress(progress);
+      notify();
+      return progress;
+    },
+
+    clearLearningProgress() {
+      writeLearningProgress({});
+      notify();
+    },
+
     getSettings() {
       return { ...DEFAULT_SETTINGS, ...readMeta().settings };
     },
@@ -276,7 +302,16 @@ export const createLocalStore = (kv: KV): Store => {
         else if (JSON.stringify(readDay(k)) === JSON.stringify(root.days[k])) unchanged += 1;
         else overwritten += 1;
       }
-      return { ok: true, summary: { added, overwritten, unchanged, templates: root.templates.length } };
+      return {
+        ok: true,
+        summary: {
+          added,
+          overwritten,
+          unchanged,
+          templates: root.templates.length,
+          learningCompleted: Object.keys(root.learningProgress ?? {}).length,
+        },
+      };
     },
 
     /** Full replace, not a merge — the file is treated as the authoritative history. */

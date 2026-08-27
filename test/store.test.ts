@@ -184,6 +184,32 @@ describe('export / import', () => {
   });
 });
 
+describe('learning progress', () => {
+  it('persists lesson completion independently from day history', () => {
+    const { kv, store } = fresh();
+    store.setLearningLessonCompleted('business-ideas-01', true, NOW);
+    expect(store.getLearningProgress()['business-ideas-01']?.completedAt).toBe(NOW);
+    expect(kv.get('rt:learning:progress')).not.toBeNull();
+    expect(store.dayKeys()).toEqual([]);
+
+    store.setLearningLessonCompleted('business-ideas-01', false, NOW);
+    expect(store.getLearningProgress()['business-ideas-01']).toBeUndefined();
+  });
+
+  it('includes learning progress in export/import and can clear it', () => {
+    const { store } = fresh();
+    store.setLearningLessonCompleted('agents-what-are-agents-01', true, NOW);
+    const backup = structuredClone(store.exportAll());
+    expect(backup.learningProgress['agents-what-are-agents-01']).toBeDefined();
+
+    store.clearLearningProgress();
+    expect(store.getLearningProgress()).toEqual({});
+
+    store.importAll(backup);
+    expect(store.getLearningProgress()['agents-what-are-agents-01']).toBeDefined();
+  });
+});
+
 describe('settings', () => {
   it('merges patches and notifies subscribers', () => {
     const { store } = fresh();

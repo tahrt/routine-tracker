@@ -20,6 +20,7 @@ export interface PendingImport {
   added: number;
   overwritten: number;
   unchanged: number;
+  learningCompleted: number;
 }
 
 export interface SettingsViewProps {
@@ -84,7 +85,8 @@ export const renderSettings = ({
                  <p class="confirm__text">
                    <strong>${esc(pendingImport.fileName)}</strong> replaces your current data:
                    adds ${pendingImport.added}, overwrites ${pendingImport.overwritten}, leaves ${pendingImport.unchanged} unchanged.
-                   Days not in the file are removed.
+                   Learning progress: ${pendingImport.learningCompleted} completed lesson${pendingImport.learningCompleted === 1 ? '' : 's'}.
+                   Days and learning progress not in the file are removed.
                  </p>
                  <div class="row">
                    <button class="btn btn--primary" type="button" data-action="import-confirm">Replace my data</button>

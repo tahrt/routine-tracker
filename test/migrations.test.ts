@@ -60,6 +60,23 @@ describe('migrate v1 -> v2', () => {
   });
 });
 
+describe('migrate v3 -> v4 learning progress', () => {
+  it('adds empty learning progress without changing existing routine data', () => {
+    const v3 = {
+      schemaVersion: 3,
+      settings: { timezone: 'Asia/Bangkok', dayCutoffHour: 4, weekStartsOn: 1, lastExportAt: null },
+      habits: [{ id: 'gym', label: 'Gym', color: 'slate' }],
+      templates: [],
+      days: { '2026-08-24': { marker: 'keep-me' } },
+    };
+    const out = migrate(structuredClone(v3));
+    expect(out.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(out.learningProgress).toEqual({});
+    expect((out.days as any)['2026-08-24'].marker).toBe('keep-me');
+    expect(out.habits[0]?.id).toBe('gym');
+  });
+});
+
 describe('migrate guards', () => {
   it('refuses data from a newer schema than this app supports', () => {
     expect(() => migrate({ schemaVersion: 99, days: {} })).toThrow(/newer version/);

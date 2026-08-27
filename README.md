@@ -18,6 +18,7 @@ npm run icons    # regenerate PWA icons (only after changing the mark)
 
 - **Today** — the weekday's checklist, tap to complete, live total % and core %.
 - **Week** — Mon–Sun skyline. Past days are tappable so a forgotten day can be logged; future days are inert; Next stops at the current week.
+- **Learn** — structured Business, AI Agent and Negotiation paths with stages, video resources, Core/Recommended priorities, time-weighted completion and Continue Learning.
 - **Progress** — lifetime completion and current/best streaks for stable habit ids.
 - **Day status** — `active` / `rest` / `skipped`. Rest days are excluded from the week average.
 - **Edit tasks** — edit any weekday while historical day snapshots remain frozen.
@@ -33,7 +34,9 @@ npm run icons    # regenerate PWA icons (only after changing the mark)
 
 **Stable habit identity** — task names and schedules are editable, but progress is keyed by the persistent habit id. Renaming a habit does not split its history.
 
-**Schema versioning** (`src/store/migrations.ts`) — every blob carries `schemaVersion`, migrations run on load and on import, and the pre-migration data is kept under `rt:backup:preMigration:v{n}`.
+**Learning curriculum vs progress** — curriculum ships in `src/config/learning.ts`, while only personal lesson completion is stored under `rt:learning:progress`. Resource URLs/titles can therefore be improved in a future deploy while stable lesson ids preserve completion.
+
+**Schema versioning** (`src/store/migrations.ts`) — every blob carries `schemaVersion`, migrations run on load and on import, and the pre-migration data is kept under `rt:backup:preMigration:v{n}`. Schema v4 adds Learning Path completion without rewriting existing routine history.
 
 **Storage** (`src/store/`) — one `rt:day:YYYY-MM-DD` key per day so a checkbox tap is an O(1) write, plus an `rt:index` cache that is rebuilt from the real keys if it ever diverges. All app code goes through the `Store` interface.
 

@@ -79,6 +79,42 @@ export interface Habit {
   archived?: boolean;
 }
 
+
+export type LearningResourceType = 'video' | 'article' | 'exercise' | 'case-study' | 'practice' | 'project';
+export type LearningPriority = 'core' | 'recommended' | 'optional';
+
+export interface LearningLesson {
+  /** Stable across resource swaps so progress survives curriculum edits. */
+  id: string;
+  title: string;
+  source: string;
+  type: LearningResourceType;
+  priority: LearningPriority;
+  durationMinutes: number;
+  url?: string;
+}
+
+export interface LearningStage {
+  id: string;
+  title: string;
+  description?: string;
+  lessons: LearningLesson[];
+}
+
+export interface LearningPath {
+  id: string;
+  title: string;
+  subtitle: string;
+  stages: LearningStage[];
+}
+
+export interface LearningProgressEntry {
+  lessonId: string;
+  completedAt: string;
+}
+
+export type LearningProgress = Record<string, LearningProgressEntry>;
+
 export interface RootData {
   schemaVersion: number;
   settings: Settings;
@@ -86,4 +122,6 @@ export interface RootData {
   habits: Habit[];
   templates: TemplateVersion[];
   days: Record<string, DayRecord>;
+  /** Personal completion state only; curriculum itself ships with the app. */
+  learningProgress: LearningProgress;
 }

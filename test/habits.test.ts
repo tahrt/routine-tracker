@@ -3,7 +3,7 @@ import { DEFAULT_SETTINGS } from '../src/config/schedule';
 import { materializeDay } from '../src/lib/day';
 import { memoryKV } from '../src/store/kv';
 import { createLocalStore } from '../src/store/localStore';
-import { migrate } from '../src/store/migrations';
+import { CURRENT_SCHEMA_VERSION, migrate } from '../src/store/migrations';
 import { renderProgress } from '../src/views/progress';
 
 const NOW = '2026-08-24T09:00:00.000Z';
@@ -74,7 +74,7 @@ describe('v2 -> v3 habit migration', () => {
       days: {},
     });
 
-    expect(migrated.schemaVersion).toBe(3);
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(migrated.habits.some((habit) => habit.id === 'gym')).toBe(true);
     expect(migrated.habits.find((habit) => habit.id === 'custom-habit')).toMatchObject({
       id: 'custom-habit',

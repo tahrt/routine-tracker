@@ -5,6 +5,7 @@
  * import and the listeners/timer can be torn down (used by the integration tests).
  */
 
+import { LEARNING_PATHS } from './config/learning';
 import { addDays, dateKey, isFutureKey, parseKey, todayKey as computeTodayKey, weekKeys } from './lib/date';
 import { currentTemplate, isOutOfSync, materializeDay, newTaskId, syncRecordToTemplate } from './lib/day';
 import { toggleTask } from './lib/stats';
@@ -13,11 +14,12 @@ import type { DayRecord, DayStatus, WeekTemplate } from './types';
 import { toast } from './ui/dom';
 import { renderDay } from './views/day';
 import { renderEditTemplate } from './views/editTemplate';
+import { renderLearningOverview, renderLearningPath } from './views/learning';
 import { renderProgress } from './views/progress';
 import { renderSettings, type PendingImport } from './views/settings';
 import { renderWeek } from './views/week';
 
-type Tab = 'today' | 'week' | 'progress' | 'settings';
+type Tab = 'today' | 'week' | 'learn' | 'progress' | 'settings';
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
 
@@ -27,6 +29,7 @@ interface AppState {
   weekAnchor: string;
   /** Set when a specific day is opened from the Week view. */
   openDay: string | null;
+  learningPathId: string | null;
   rawOpen: boolean;
   resetArmed: boolean;
   pendingImport: (PendingImport & { raw: unknown }) | null;
@@ -52,6 +55,7 @@ export const startApp = (): (() => void) => {
     tab: 'today',
     weekAnchor: today(),
     openDay: null,
+    learningPathId: null,
     rawOpen: false,
     resetArmed: false,
     pendingImport: null,
@@ -95,6 +99,7 @@ export const startApp = (): (() => void) => {
       [
         ['today', 'Today'],
         ['week', 'Week'],
+        ['learn', 'Learn'],
         ['progress', 'Progress'],
         ['settings', 'Settings'],
       ] as [Tab, string][]
@@ -132,6 +137,10 @@ export const startApp = (): (() => void) => {
       });
     } else if (state.tab === 'week') {
       body = renderWeek({ anchorKey: state.weekAnchor, todayKey: t, records: recordsFor(weekKeys(parseKey(state.weekAnchor))) });
+    } else if (state.tab === 'learn') {
+      const progress = store.getLearningProgress();
+      const path = state.learningPathId ? LEARNING_PATHS.find((candidate) => candidate.id === state.learningPathId) : undefined;
+      body = path ? renderLearningPath(path, progress) : renderLearningOverview(LEARNING_PATHS, progress);
     } else if (state.tab === 'progress') {
       body = renderProgress({ todayKey: t, records: store.listDays({ to: t }), habits });
     } else {
@@ -192,6 +201,7 @@ export const startApp = (): (() => void) => {
   const openTab = (tab: Tab): void => {
     state.tab = tab;
     state.openDay = null;
+    state.learningPathId = null;
     state.editing = null;
     if (tab === 'week') state.weekAnchor = today();
     render();
@@ -248,6 +258,29 @@ export const startApp = (): (() => void) => {
     back: () => {
       state.openDay = null;
       state.tab = 'week';
+      render();
+    },
+
+    'open-learning-path': (el) => {
+      const id = el.dataset.id;
+      if (!id || !LEARNING_PATHS.some((path) => path.id === id)) return;
+      state.tab = 'learn';
+      state.learningPathId = id;
+      state.openDay = null;
+      render();
+    },
+
+    'learning-back': () => {
+      state.tab = 'learn';
+      state.learningPathId = null;
+      render();
+    },
+
+    'toggle-learning-lesson': (el) => {
+      const id = el.dataset.id;
+      if (!id) return;
+      const completed = store.getLearningProgress()[id] !== undefined;
+      store.setLearningLessonCompleted(id, !completed, nowIso());
       render();
     },
 
@@ -419,7 +452,8 @@ export const startApp = (): (() => void) => {
         state.pendingImport = null;
         state.weekAnchor = today();
         state.openDay = null;
-        toast(`Imported ${summary.added + summary.overwritten + summary.unchanged} days.`);
+        state.learningPathId = null;
+        toast(`Imported ${summary.added + summary.overwritten + summary.unchanged} days and ${summary.learningCompleted} learning completions.`);
       } catch (err) {
         toast(err instanceof Error ? err.message : 'Import failed.', 'error');
       }
@@ -453,9 +487,11 @@ export const startApp = (): (() => void) => {
         return;
       }
       for (const k of store.dayKeys()) store.deleteDay(k);
+      store.clearLearningProgress();
       state.resetArmed = false;
       state.openDay = null;
-      toast('All day records erased.');
+      state.learningPathId = null;
+      toast('Day records and learning progress erased.');
       render();
     },
   };

@@ -1,10 +1,12 @@
 /** Views are pure string builders, so they can be asserted without a DOM. */
 
 import { describe, expect, it } from 'vitest';
+import { LEARNING_PATHS } from '../src/config/learning';
 import { DEFAULT_SCHEDULE, HABITS } from '../src/config/schedule';
 import { materializeDay } from '../src/lib/day';
 import type { TemplateVersion } from '../src/types';
 import { renderDay } from '../src/views/day';
+import { renderLearningOverview, renderLearningPath } from '../src/views/learning';
 import { renderProgress } from '../src/views/progress';
 import { renderWeek } from '../src/views/week';
 
@@ -126,5 +128,29 @@ describe('renderProgress', () => {
     expect(html).toContain('No tracked days yet');
     expect(html).toContain('0<span class="meter__pct">%</span>');
     expect(html).toContain('streak-dot--untracked');
+  });
+});
+
+
+describe('renderLearning', () => {
+  it('renders all three paths and Continue Learning from empty progress', () => {
+    const html = renderLearningOverview(LEARNING_PATHS, {});
+    expect(html).toContain('CONTINUE LEARNING');
+    expect(html).toContain('Start &amp; Grow a Business');
+    expect(html).toContain('Great &amp; Reliable AI Agent Team');
+    expect(html).toContain('Business Negotiation Strategy');
+  });
+
+  it('renders stages, resources and completion state for a path', () => {
+    const path = LEARNING_PATHS[0]!;
+    const first = path.stages[0]!.lessons[0]!;
+    const html = renderLearningPath(path, {
+      [first.id]: { lessonId: first.id, completedAt: NOW },
+    });
+    expect(html).toContain('Stage 1 · Foundations');
+    expect(html).toContain('data-action="toggle-learning-lesson"');
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain('youtube.com');
+    expect(html).toContain('Recommended');
   });
 });
