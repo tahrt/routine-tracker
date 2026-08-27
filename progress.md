@@ -278,6 +278,21 @@ After using/reviewing the seeded V1 videos, the curriculum can be expanded towar
 Because lesson ids are stable, resource replacement and curriculum refinement can happen without losing completed learning history.
 
 
+## Momentum redesign release status
+
+Released on 2026-08-27.
+
+- Feature commit: `cc94b0a` — `feat: redesign routine around momentum`
+- Pushed successfully to `origin/main`
+- `npm run deploy` completed successfully and published the build to `gh-pages`
+- Deployed service-worker build id: `cc94b0a02974-20260827051537`
+- Release verification: 9/9 test files, 130/130 tests passed
+- TypeScript, Vite production build and service-worker generation passed
+- No schema migration was introduced; existing v4 routine and learning data stays in place
+- Existing Home Screen installs should receive this release through the Safe Update flow
+
+An additional external HTTP fetch of the GitHub Pages URL was unavailable in this session, so publication status is based on the successful deploy/publish command.
+
 ## Momentum UI redesign
 
 Implemented and verified on 2026-08-27.
