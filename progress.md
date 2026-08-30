@@ -2,9 +2,21 @@
 
 Last updated: 2026-08-30
 
-## Planning / Execution Layer — V2.1
+## Planning / Execution Layer — V2.2
 
 Product plan: `ROUTINE-V2-PLAN.md`
+
+Latest IA cleanup:
+
+- bottom navigation is now **Today / Work / Insights / More**
+- **Work** is the home for Active Now + On Deck Workstreams
+- **Learning Paths** live inside the Learning Workstream; Today Continue Learning remains a direct shortcut
+- **Application Tracker** lives inside Job Search and returns to Job Search when closed
+- Planning Manager keeps only week planning; Applications are no longer presented as a separate global tool there
+- Application rows, Add Application, Workstream editing, allocation editing, action controls, and Weekly Review are collapsed by default
+- no schema/storage change; existing v5 planning data remains valid
+- new integration coverage verifies the Learning Workstream → Learning Path hierarchy
+
 
 Current status as of 2026-08-30:
 

@@ -102,7 +102,7 @@ export const renderTodayPlanning = ({
           <span>PLAN FOR TODAY</span>
           <strong>${capacityLabel}</strong>
         </div>
-        <button type="button" class="btn btn--tiny" data-action="open-planner">Manage</button>
+        <button type="button" class="btn btn--tiny" data-action="open-planner">Plan week</button>
       </div>
       ${plan.warnings.map((warning) => `<p class="planner-warning">${esc(warning)}</p>`).join('')}
       ${scheduled || `<div class="planner-empty planner-empty--compact">
@@ -157,7 +157,7 @@ export const renderWeekPlanning = ({
           <span>WEEK PLAN</span>
           <strong>${summary.completedBlocks} done · ${summary.plannedBlocks} scheduled · ${summary.capacityBlocks} capacity</strong>
         </div>
-        <button type="button" class="btn btn--tiny" data-action="open-planner">Manage</button>
+        <button type="button" class="btn btn--tiny" data-action="open-planner">Plan week</button>
       </div>
       ${commitments}
     </section>`;
@@ -398,11 +398,6 @@ export const renderPlanningManager = ({
         </details>
       </section>
 
-      <button type="button" class="planner-quicklink" data-action="open-applications">
-        <span><small>JOB SEARCH</small><strong>Application Tracker</strong></span>
-        <span>Open pipeline ›</span>
-      </button>
-
       <section class="planner-manager__section planner-manager__section--flat">
         <div class="planner-section-head">
           <div><span>THIS WEEK</span><strong>${weekSummary.completedBlocks} done · ${weekSummary.plannedBlocks} scheduled · ${weekSummary.capacityBlocks} capacity</strong></div>
@@ -471,6 +466,7 @@ export const renderWorkstreamDetail = ({
   plannedActions,
   jobApplications,
   habits,
+  domainHtml = '',
 }: {
   workstream: Workstream;
   todayKey: string;
@@ -478,6 +474,7 @@ export const renderWorkstreamDetail = ({
   plannedActions: Readonly<Record<string, PlannedAction>>;
   jobApplications: Readonly<Record<string, JobApplication>>;
   habits: readonly Habit[];
+  domainHtml?: string;
 }): string => {
   const allActions = activeScheduledActions(plannedActions, workstream.id);
   const upcoming = allActions.filter((action) => action.date >= todayKey);
@@ -547,6 +544,8 @@ export const renderWorkstreamDetail = ({
         <div><span>CURRENT MILESTONE</span><strong>${esc(workstream.execution.milestone ?? 'No milestone')}</strong></div>
         <div><span>NEXT ACTION</span><strong>${esc(workstream.execution.nextAction ?? 'No next action')}</strong></div>
       </section>
+
+      ${domainHtml}
 
       <section class="planner-manager__section">
         <div class="planner-section-head"><div><span>THIS WEEK</span><strong>${esc(shortDate(dateKey(monday)))} – ${esc(shortDate(dateKey(addDays(monday, 6))))}</strong></div></div>

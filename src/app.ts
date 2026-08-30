@@ -26,7 +26,7 @@ import { renderTodayDashboard } from './views/dashboard';
 import { renderDay } from './views/day';
 import { renderEditTemplate } from './views/editTemplate';
 import { renderInsights } from './views/insights';
-import { renderLearningOverview, renderLearningPath } from './views/learning';
+import { renderLearningPath, renderLearningWorkstreamPanel } from './views/learning';
 import {
   renderPlanningManager,
   renderTodayPlanning,
@@ -36,8 +36,9 @@ import {
 } from './views/planning';
 import { renderSettings, type PendingImport } from './views/settings';
 import { renderWeek } from './views/week';
+import { renderWorkHome } from './views/work';
 
-type Tab = 'today' | 'learn' | 'insights' | 'more';
+type Tab = 'today' | 'work' | 'insights' | 'more';
 type TodayMode = 'today' | 'week';
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
@@ -50,11 +51,12 @@ interface AppState {
   /** Set when a specific day is opened from the Week view. */
   openDay: string | null;
   learningPathId: string | null;
+  learningReturnWorkstreamId: string | null;
   planningOpen: boolean;
   applicationsOpen: boolean;
   applicationsReturnWorkstreamId: string | null;
   workstreamOpenId: string | null;
-  workstreamReturn: 'today' | 'week' | 'planner';
+  workstreamReturn: 'today' | 'week' | 'planner' | 'work';
   rawOpen: boolean;
   resetArmed: boolean;
   pendingImport: (PendingImport & { raw: unknown }) | null;
@@ -82,6 +84,7 @@ export const startApp = (): (() => void) => {
     weekAnchor: today(),
     openDay: null,
     learningPathId: null,
+    learningReturnWorkstreamId: null,
     planningOpen: false,
     applicationsOpen: false,
     applicationsReturnWorkstreamId: null,
@@ -128,7 +131,7 @@ export const startApp = (): (() => void) => {
   const tabBar = (tab: Tab): string => {
     const items: Array<[Tab, string, string]> = [
       ['today', 'Today', '⌂'],
-      ['learn', 'Learn', '◇'],
+      ['work', 'Work', '◇'],
       ['insights', 'Insights', '▥'],
       ['more', 'More', '•••'],
     ];
@@ -160,7 +163,12 @@ export const startApp = (): (() => void) => {
     const habits = store.getHabits();
 
     let body: string;
-    if (state.workstreamOpenId) {
+    if (state.learningPathId) {
+      const path = LEARNING_PATHS.find((candidate) => candidate.id === state.learningPathId);
+      body = path
+        ? renderLearningPath(path, store.getLearningProgress())
+        : '<p class="empty">Learning path not found.</p>';
+    } else if (state.workstreamOpenId) {
       const workstream = store.getWorkstreams()[state.workstreamOpenId];
       body = workstream
         ? renderWorkstreamDetail({
@@ -170,6 +178,10 @@ export const startApp = (): (() => void) => {
             plannedActions: store.getPlannedActions(),
             jobApplications: store.getJobApplications(),
             habits,
+            domainHtml:
+              workstream.type === 'learning'
+                ? renderLearningWorkstreamPanel(LEARNING_PATHS, store.getLearningProgress())
+                : '',
           })
         : '<p class="empty">Workstream not found.</p>';
     } else if (state.applicationsOpen) {
@@ -253,10 +265,21 @@ export const startApp = (): (() => void) => {
                 !state.syncDismissed.has(t) &&
                 isOutOfSync(store.getDay(t) as DayRecord, currentTemplate(templates, t)),
             });
-    } else if (state.tab === 'learn') {
-      const progress = store.getLearningProgress();
-      const path = state.learningPathId ? LEARNING_PATHS.find((candidate) => candidate.id === state.learningPathId) : undefined;
-      body = path ? renderLearningPath(path, progress) : renderLearningOverview(LEARNING_PATHS, progress);
+    } else if (state.tab === 'work') {
+      const workWeekPlan = weekPlanForDate(t, store.getWeekPlans());
+      body = renderWorkHome({
+        workstreams: store.getWorkstreams(),
+        weekSummary: weekPlanningSummary({
+          dateK: t,
+          capacityProfiles: store.getCapacityProfiles(),
+          weekPlans: store.getWeekPlans(),
+          plannedActions: store.getPlannedActions(),
+        }),
+        weekPlan: workWeekPlan,
+        applications: store.getJobApplications(),
+        learningPaths: LEARNING_PATHS,
+        learningProgress: store.getLearningProgress(),
+      });
     } else if (state.tab === 'insights') {
       body = renderInsights({
         todayKey: t,
@@ -323,6 +346,7 @@ export const startApp = (): (() => void) => {
     state.tab = tab;
     state.openDay = null;
     state.learningPathId = null;
+    state.learningReturnWorkstreamId = null;
     state.planningOpen = false;
     state.applicationsOpen = false;
     state.applicationsReturnWorkstreamId = null;
@@ -398,7 +422,10 @@ export const startApp = (): (() => void) => {
     },
 
     'open-applications': () => {
-      state.applicationsReturnWorkstreamId = state.workstreamOpenId;
+      const careerWorkstream = Object.values(store.getWorkstreams()).find(
+        (workstream) => workstream.type === 'career',
+      );
+      state.applicationsReturnWorkstreamId = state.workstreamOpenId ?? careerWorkstream?.id ?? null;
       state.applicationsOpen = true;
       state.planningOpen = false;
       state.workstreamOpenId = null;
@@ -421,7 +448,7 @@ export const startApp = (): (() => void) => {
     'open-workstream': (el) => {
       const id = el.dataset.id;
       if (!id || !store.getWorkstreams()[id]) return;
-      state.workstreamReturn = state.planningOpen ? 'planner' : state.todayMode;
+      state.workstreamReturn = state.tab === 'work' ? 'work' : state.planningOpen ? 'planner' : state.todayMode;
       state.workstreamOpenId = id;
       state.planningOpen = false;
       state.applicationsOpen = false;
@@ -434,6 +461,8 @@ export const startApp = (): (() => void) => {
       state.workstreamOpenId = null;
       if (state.workstreamReturn === 'planner') {
         state.planningOpen = true;
+      } else if (state.workstreamReturn === 'work') {
+        state.tab = 'work';
       } else {
         state.tab = 'today';
         state.todayMode = state.workstreamReturn;
@@ -460,15 +489,43 @@ export const startApp = (): (() => void) => {
     'open-learning-path': (el) => {
       const id = el.dataset.id;
       if (!id || !LEARNING_PATHS.some((path) => path.id === id)) return;
-      state.tab = 'learn';
+      const learningWorkstream = Object.values(store.getWorkstreams()).find(
+        (workstream) => workstream.type === 'learning',
+      );
+      state.tab = 'work';
+      state.learningReturnWorkstreamId = learningWorkstream?.id ?? null;
       state.learningPathId = id;
+      state.workstreamOpenId = null;
+      state.planningOpen = false;
+      state.applicationsOpen = false;
       state.openDay = null;
       render();
     },
 
+    'open-learning-hub': () => {
+      const learningWorkstream = Object.values(store.getWorkstreams()).find(
+        (workstream) => workstream.type === 'learning',
+      );
+      if (learningWorkstream) {
+        state.tab = 'work';
+        state.workstreamReturn = 'work';
+        state.workstreamOpenId = learningWorkstream.id;
+      } else {
+        state.tab = 'work';
+        state.learningReturnWorkstreamId = null;
+        state.learningPathId = LEARNING_PATHS[0]?.id ?? null;
+      }
+      render();
+    },
+
     'learning-back': () => {
-      state.tab = 'learn';
       state.learningPathId = null;
+      state.tab = 'work';
+      if (state.learningReturnWorkstreamId && store.getWorkstreams()[state.learningReturnWorkstreamId]) {
+        state.workstreamReturn = 'work';
+        state.workstreamOpenId = state.learningReturnWorkstreamId;
+      }
+      state.learningReturnWorkstreamId = null;
       render();
     },
 

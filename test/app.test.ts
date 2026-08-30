@@ -141,13 +141,14 @@ describe('app', () => {
     expect(app().textContent).toContain('best current');
   });
 
-  it('opens Learn, persists a lesson completion, and advances progress', () => {
+  it('opens Work, reaches Learning Paths, persists a lesson completion, and advances progress', () => {
     boot();
-    click(app().querySelector('[data-action="tab"][data-tab="learn"]'));
-    expect(app().textContent).toContain('Start & Grow a Business');
-    expect(app().textContent).toContain('CONTINUE LEARNING');
+    click(app().querySelector('[data-action="tab"][data-tab="work"]'));
+    expect(app().querySelector('.tabbar__btn.is-active')?.textContent?.trim()).toContain('Work');
+    expect(app().textContent).toContain('What are you moving forward?');
+    expect(app().textContent).toContain('Learning Paths');
 
-    click(app().querySelector('[data-action="open-learning-path"][data-id="business"]'));
+    click(app().querySelector('[data-action="open-learning-hub"]'));
     expect(app().textContent).toContain('Stage 1 · Foundations');
     const first = app().querySelector('[data-action="toggle-learning-lesson"][data-id="business-ideas-01"]');
     click(first);
@@ -159,6 +160,35 @@ describe('app', () => {
     click(app().querySelector('[data-action="toggle-learning-lesson"][data-id="business-ideas-01"]'));
     const undone = JSON.parse(window.localStorage.getItem('rt:learning:progress') as string);
     expect(undone['business-ideas-01']).toBeUndefined();
+
+    click(app().querySelector('[data-action="learning-back"]'));
+    expect(app().querySelector('.tabbar__btn.is-active')?.textContent?.trim()).toContain('Work');
+  });
+
+  it('nests Learning Paths under a Learning workstream', () => {
+    boot();
+    click(app().querySelector('[data-action="open-planner"]'));
+    (document.getElementById('planner-new-title') as HTMLInputElement).value = 'Learning';
+    (document.getElementById('planner-new-type') as HTMLSelectElement).value = 'learning';
+    (document.getElementById('planner-new-priority') as HTMLSelectElement).value = 'support';
+    (document.getElementById('planner-new-habit') as HTMLSelectElement).value = 'learning';
+    click(app().querySelector('[data-action="planning-add-workstream"]'));
+    click(app().querySelector('[data-action="close-planner"]'));
+
+    click(app().querySelector('[data-action="tab"][data-tab="work"]'));
+    expect(app().textContent).toContain('ACTIVE NOW');
+    expect(app().textContent).toContain('Learning');
+    click(app().querySelector('[data-action="open-workstream"]'));
+
+    expect(app().textContent).toContain('CONTINUE LEARNING');
+    expect(app().textContent).toContain('Start & Grow a Business');
+    expect(app().textContent).toContain('Great & Reliable AI Agent Team');
+
+    click(app().querySelector('[data-action="open-learning-path"][data-id="business"]'));
+    expect(app().textContent).toContain('Stage 1 · Foundations');
+    click(app().querySelector('[data-action="learning-back"]'));
+    expect(app().textContent).toContain('Learning');
+    expect(app().textContent).toContain('CONTINUE LEARNING');
   });
 
   it('exports a backup and records when it happened', () => {
@@ -278,8 +308,12 @@ describe('app', () => {
     (document.getElementById('planner-new-habit') as HTMLSelectElement).value = 'jobsearch';
     click(app().querySelector('[data-action="planning-add-workstream"]'));
 
+    click(app().querySelector('[data-action="close-planner"]'));
+    click(app().querySelector('[data-action="tab"][data-tab="work"]'));
+    click(app().querySelector('[data-action="open-workstream"]'));
+    expect(app().textContent).toContain('APPLICATIONS');
     click(app().querySelector('[data-action="open-applications"]'));
-    expect(app().textContent).toContain('Application Tracker');
+    expect(app().textContent).toContain('Pipeline');
 
     (document.getElementById('application-new-company') as HTMLInputElement).value = 'Example Co';
     (document.getElementById('application-new-role') as HTMLInputElement).value = 'AI Solutions';
@@ -299,7 +333,9 @@ describe('app', () => {
     expect(stored.nextAction).toBe('Prepare interview');
 
     click(app().querySelector('[data-action="close-applications"]'));
-    click(app().querySelector('[data-action="close-planner"]'));
+    expect(app().textContent).toContain('Job Search');
+    click(app().querySelector('[data-action="close-workstream"]'));
+    click(app().querySelector('[data-action="tab"][data-tab="today"]'));
     expect(app().textContent).toContain('Example Co — Prepare interview');
     expect(app().textContent).toContain('Live pipeline');
     expect(app().textContent).toContain('0 / 2 blocks scheduled');

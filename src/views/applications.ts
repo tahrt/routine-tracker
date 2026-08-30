@@ -42,47 +42,56 @@ const stageOptions = (selected: ApplicationStage): string =>
 
 const card = (application: JobApplication, todayKey: string): string => {
   const attention = needsAttention(application, todayKey);
-  return `
-    <article class="application-card ${attention ? 'application-card--attention' : ''}" data-application-id="${esc(application.id)}">
-      <div class="application-card__head">
-        <div>
-          <span>${attention ? 'NEEDS ATTENTION' : stageLabel(application.stage).toUpperCase()}</span>
-          <h3>${esc(application.company)}</h3>
-          <p>${esc(application.role)}</p>
-        </div>
-        <select data-field="stage" aria-label="Stage for ${esc(application.company)}">${stageOptions(application.stage)}</select>
-      </div>
+  const next = application.nextAction || 'No next action';
+  const due = application.nextActionDue ? `Due ${esc(application.nextActionDue)}` : 'No due date';
 
-      <div class="planner-form-grid">
-        <label>Fit 1–5
-          <input data-field="fitScore" type="number" min="1" max="5" value="${application.fitScore ?? ''}">
-        </label>
-        <label>Next action due
-          <input data-field="nextActionDue" type="date" value="${esc(application.nextActionDue ?? '')}">
-        </label>
-        <label>Next event
-          <input data-field="nextEventAt" type="date" value="${esc(application.nextEventAt?.slice(0, 10) ?? '')}">
+  return `
+    <details class="application-row ${attention ? 'application-row--attention' : ''}" data-application-id="${esc(application.id)}">
+      <summary>
+        <span class="application-row__copy">
+          <small>${attention ? 'NEEDS ATTENTION' : stageLabel(application.stage).toUpperCase()}</small>
+          <strong>${esc(application.company)}</strong>
+          <em>${esc(application.role)}</em>
+        </span>
+        <span class="application-row__next">
+          <strong>${esc(next)}</strong>
+          <small>${due}</small>
+        </span>
+      </summary>
+
+      <div class="application-row__editor">
+        <div class="planner-form-grid">
+          <label>Stage
+            <select data-field="stage" aria-label="Stage for ${esc(application.company)}">${stageOptions(application.stage)}</select>
+          </label>
+          <label>Fit 1–5
+            <input data-field="fitScore" type="number" min="1" max="5" value="${application.fitScore ?? ''}">
+          </label>
+          <label>Next action due
+            <input data-field="nextActionDue" type="date" value="${esc(application.nextActionDue ?? '')}">
+          </label>
+          <label>Next event
+            <input data-field="nextEventAt" type="date" value="${esc(application.nextEventAt?.slice(0, 10) ?? '')}">
+          </label>
+        </div>
+        <label>Next action
+          <input data-field="nextAction" value="${esc(application.nextAction ?? '')}" placeholder="Prepare interview">
         </label>
         <label>Job URL
           <input data-field="jobUrl" value="${esc(application.jobUrl ?? '')}" placeholder="https://…">
         </label>
+        <label>Fit reason
+          <input data-field="fitReason" value="${esc(application.fitReason ?? '')}" placeholder="Why this role fits">
+        </label>
+        <label>Notes
+          <textarea data-field="notes" rows="2" placeholder="Private notes">${esc(application.notes ?? '')}</textarea>
+        </label>
+        <div class="application-card__footer">
+          <span>${application.appliedAt ? `Applied ${esc(application.appliedAt.slice(0, 10))}` : application.savedAt ? `Saved ${esc(application.savedAt.slice(0, 10))}` : 'Not dated'}</span>
+          <button type="button" class="btn btn--primary btn--tiny" data-action="application-save" data-id="${esc(application.id)}">Save changes</button>
+        </div>
       </div>
-
-      <label>Next action
-        <input data-field="nextAction" value="${esc(application.nextAction ?? '')}" placeholder="Prepare interview">
-      </label>
-      <label>Fit reason
-        <input data-field="fitReason" value="${esc(application.fitReason ?? '')}" placeholder="Why this role fits">
-      </label>
-      <label>Notes
-        <textarea data-field="notes" rows="2" placeholder="Private notes">${esc(application.notes ?? '')}</textarea>
-      </label>
-
-      <div class="application-card__footer">
-        <span>${application.appliedAt ? `Applied ${esc(application.appliedAt.slice(0, 10))}` : application.savedAt ? `Saved ${esc(application.savedAt.slice(0, 10))}` : 'Not dated'}</span>
-        <button type="button" class="btn btn--tiny" data-action="application-save" data-id="${esc(application.id)}">Save</button>
-      </div>
-    </article>`;
+    </details>`;
 };
 
 export const renderApplications = ({
@@ -112,20 +121,19 @@ export const renderApplications = ({
   });
 
   return `
-    <section class="applications">
-      <header class="planner-manager__head">
-        <button type="button" class="back" data-action="close-applications">← Back</button>
-        <p class="day__date">JOB SEARCH</p>
-        <h1>Application Tracker</h1>
-        <p>Track conversion, not just how many roles you saved.</p>
+    <section class="applications applications--simple">
+      <header class="planner-manager__head planner-manager__head--compact">
+        <button type="button" class="back" data-action="close-applications">← Job Search</button>
+        <p class="day__date">APPLICATIONS</p>
+        <h1>Pipeline</h1>
+        <p>Keep only the next move visible.</p>
       </header>
 
-      <section class="application-metrics">
-        <div><strong>${all.length}</strong><span>Total</span></div>
-        <div><strong>${attention.length}</strong><span>Needs attention</span></div>
-        <div><strong>${submitted}</strong><span>Applied this week</span></div>
-        <div><strong>${activeInterviews}</strong><span>Live interviews</span></div>
-        <div><strong>${offers}</strong><span>Offers</span></div>
+      <section class="application-metrics application-metrics--simple">
+        <div><strong>${attention.length}</strong><span>needs attention</span></div>
+        <div><strong>${submitted}</strong><span>applied this week</span></div>
+        <div><strong>${activeInterviews}</strong><span>live interviews</span></div>
+        <div><strong>${offers}</strong><span>offers</span></div>
       </section>
 
       ${attention.length
@@ -143,23 +151,27 @@ export const renderApplications = ({
           </section>`
         : ''}
 
-      <section class="planner-manager__section">
-        <div class="planner-section-head"><div><span>ADD APPLICATION</span><strong>Keep it minimal</strong></div></div>
-        <div class="planner-form-grid">
-          <label>Company<input id="application-new-company" placeholder="Company"></label>
-          <label>Role<input id="application-new-role" placeholder="AI Solutions Engineer"></label>
-          <label>Fit 1–5<input id="application-new-fit" type="number" min="1" max="5"></label>
-          <label>Stage<select id="application-new-stage">${stageOptions('saved')}</select></label>
-          <label>Next action due<input id="application-new-due" type="date"></label>
-          <label>Job URL<input id="application-new-url" placeholder="https://…"></label>
-        </div>
-        <label>Next action<input id="application-new-next" placeholder="Tailor and submit application"></label>
-        <button type="button" class="btn btn--primary btn--tiny" data-action="application-add">Add application</button>
-      </section>
-
-      <section class="planner-manager__section">
+      <section class="planner-manager__section planner-manager__section--flat">
         <div class="planner-section-head"><div><span>PIPELINE</span><strong>${all.length} applications</strong></div></div>
-        ${sorted.length ? sorted.map((application) => card(application, todayKey)).join('') : '<p class="empty">No applications yet.</p>'}
+        <div class="application-list">
+          ${sorted.length ? sorted.map((application) => card(application, todayKey)).join('') : '<p class="empty">No applications yet.</p>'}
+        </div>
+
+        <details class="planner-disclosure planner-disclosure--create">
+          <summary>＋ Add application</summary>
+          <div class="planner-disclosure__body">
+            <div class="planner-form-grid">
+              <label>Company<input id="application-new-company" placeholder="Company"></label>
+              <label>Role<input id="application-new-role" placeholder="AI Solutions Engineer"></label>
+              <label>Fit 1–5<input id="application-new-fit" type="number" min="1" max="5"></label>
+              <label>Stage<select id="application-new-stage">${stageOptions('saved')}</select></label>
+              <label>Next action due<input id="application-new-due" type="date"></label>
+              <label>Job URL<input id="application-new-url" placeholder="https://…"></label>
+            </div>
+            <label>Next action<input id="application-new-next" placeholder="Tailor and submit application"></label>
+            <button type="button" class="btn btn--primary btn--tiny" data-action="application-add">Add application</button>
+          </div>
+        </details>
       </section>
     </section>`;
 };

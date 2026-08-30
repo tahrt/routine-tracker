@@ -1,4 +1,4 @@
-# Routine Planning V2.1 — Execution UX Plan
+# Routine Planning V2.2 — Navigation & Information Architecture
 
 Last updated: 2026-08-30
 
@@ -179,9 +179,45 @@ V2.1 is done when:
 13. Existing local data requires no reset or re-import.
 14. Update ships through the existing in-place PWA flow.
 
+## V2.2 navigation / IA cleanup
+
+The execution model stays the same. V2.2 simplifies where things live:
+
+```text
+Today
+→ execute today
+
+Work
+→ understand / manage active Workstreams
+   Job Search → Applications
+   Learning → Learning Paths
+   Projects → schedule / milestone / DoD
+
+Insights
+→ consistency and progress
+
+More
+→ system settings / backup / routine configuration
+```
+
+Changes:
+
+- bottom nav changes from `Today / Learn / Insights / More` to `Today / Work / Insights / More`
+- Work becomes the primary Workstream home with Active Now + On Deck
+- Learning Paths move under the Learning Workstream
+- Continue Learning on Today remains a fast path into the current lesson
+- Application Tracker moves under Job Search; Today alerts can deep-link there but return to Job Search
+- Planning Manager no longer exposes Application Tracker as a separate global block
+- Application rows and planning controls stay collapsed until explicitly opened
+- no schema/storage change
+
+Simplicity rule:
+
+> show the next decision by default; hide configuration until the user asks for it.
+
 ## Status
 
-V2.1 is implemented, tested, pushed, and deployed as of 2026-08-30.
+V2.1 is implemented and deployed. V2.2 is implemented locally and awaiting final release verification.
 
 Release result:
 

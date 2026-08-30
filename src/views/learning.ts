@@ -171,3 +171,37 @@ export const renderLearningPath = (
       </div>
     </section>`;
 };
+
+
+export const renderLearningWorkstreamPanel = (
+  paths: readonly LearningPath[],
+  progress: LearningProgress,
+): string => {
+  const continuePath = paths.find((path) => nextCoreLesson(path, progress));
+  const next = continuePath ? nextCoreLesson(continuePath, progress) : undefined;
+
+  return `
+    <section class="learning-workstream-panel">
+      ${continuePath && next
+        ? `<button class="learning-workstream-next" type="button" data-action="open-learning-path" data-id="${esc(continuePath.id)}">
+             <span><small>CONTINUE LEARNING</small><strong>${esc(next.title)}</strong><em>${esc(continuePath.title)} · ${formatLearningTime(next.durationMinutes)}</em></span>
+             <span aria-hidden="true">›</span>
+           </button>`
+        : '<div class="learn-complete"><strong>Core paths complete.</strong><span>Recommended and optional resources remain available.</span></div>'}
+
+      <div class="learning-workstream-paths">
+        ${paths.map((path) => {
+          const stats = pathStats(path, progress);
+          const nextLesson = nextCoreLesson(path, progress);
+          return `<button type="button" class="learning-workstream-path" data-action="open-learning-path" data-id="${esc(path.id)}">
+            <span>
+              <strong>${esc(path.title)}</strong>
+              <small>${stats.completedLessons}/${stats.totalLessons} core · ${stats.completionRate}%</small>
+              <em>${nextLesson ? `Next · ${esc(nextLesson.title)}` : 'Core complete'}</em>
+            </span>
+            <span class="learning-workstream-path__rate">${stats.completionRate}%</span>
+          </button>`;
+        }).join('')}
+      </div>
+    </section>`;
+};

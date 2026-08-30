@@ -16,12 +16,13 @@ npm run icons    # regenerate PWA icons (only after changing the mark)
 
 ## What it does
 
-- **Today** — one execution agenda: Focus Block summary + Must Win highlight + a unified checklist where dated Planned Actions replace matching generic Job Search / Project / Learning placeholders.
-- **Week** — Week Plan commitments + a Mon–Sun execution calendar with scheduled/capacity/free state, followed by the existing Routine History chart.
-- **Planning** — local Workstreams, Week Plans, dated Planned Actions, explicit Move/Defer/Cancel, deadline-risk warnings, Weekly Review, and per-Workstream calendar/schedule detail.
-- **Job Applications** — local pipeline tracker with stages, fit, due next actions and Needs Attention; due items are alerts until explicitly scheduled, so they do not fake Focus Block usage.
-- **Learn** — structured Business, AI Agent and Negotiation paths with stages, video resources, Core/Recommended priorities, time-weighted completion and Continue Learning.
-- **Insights** — weekly consistency, habit completion, streaks, learning progress and a simple Momentum status.
+- **Today** — execution only: Focus Block summary, Must Win, one unified agenda, and Needs Attention.
+- **Week** — Mon–Sun execution calendar + capacity, with Routine History kept separate underneath.
+- **Work** — the home for active Workstreams. Job Search contains Applications; Learning contains Learning Paths; projects contain their own schedule/milestone view.
+- **Planning** — a compact weekly editor for Workstreams, block allocation, dated actions, explicit Move/Defer/Cancel, and Weekly Review.
+- **Job Applications** — lives under the Job Search Workstream; the tracker prioritizes next action and keeps edit forms collapsed until needed.
+- **Learning Paths** — lives under the Learning Workstream, with a Today shortcut for Continue Learning.
+- **Insights** — weekly consistency, habit completion, streaks, learning progress and Momentum.
 - **Day status** — `active` / `rest` / `skipped`. Rest days are excluded from the week average.
 - **Edit tasks** — edit any weekday while historical day snapshots remain frozen.
 - **Habits** — stable ids let labels/schedules change without resetting Progress history.
