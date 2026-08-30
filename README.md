@@ -16,8 +16,10 @@ npm run icons    # regenerate PWA icons (only after changing the mark)
 
 ## What it does
 
-- **Today** — premium dashboard with daily core progress, Up Next, Continue Learning, routine checklist, and an embedded Today/Week switch.
-- **Week** — available inside Today; Mon–Sun history remains tappable for retroactive logging.
+- **Today** — premium dashboard with Focus Block capacity, Planning Must Win / Next actions, routine progress, Continue Learning, and the routine checklist.
+- **Week** — finite planning capacity + workstream commitments above the existing Mon–Sun routine history; past days remain tappable for retroactive logging.
+- **Planning** — local Workstreams, Week Plans, dated Planned Actions, explicit Move/Defer/Cancel, deadline-risk warnings, and Weekly Review.
+- **Job Applications** — local pipeline tracker with stages, fit, due next actions, Needs Attention, live-interview priority, and Today integration.
 - **Learn** — structured Business, AI Agent and Negotiation paths with stages, video resources, Core/Recommended priorities, time-weighted completion and Continue Learning.
 - **Insights** — weekly consistency, habit completion, streaks, learning progress and a simple Momentum status.
 - **Day status** — `active` / `rest` / `skipped`. Rest days are excluded from the week average.
@@ -38,7 +40,7 @@ npm run icons    # regenerate PWA icons (only after changing the mark)
 
 **Schema versioning** (`src/store/migrations.ts`) — every blob carries `schemaVersion`, migrations run on load and on import, and the pre-migration data is kept under `rt:backup:preMigration:v{n}`. Schema v5 adds the private Planning Layer on top of v4 Learning Path completion without rewriting existing routine history.
 
-**Storage** (`src/store/`) — one `rt:day:YYYY-MM-DD` key per day so a checkbox tap is an O(1) write, plus an `rt:index` cache that is rebuilt from the real keys if it ever diverges. All app code goes through the `Store` interface.
+**Storage** (`src/store/`) — one `rt:day:YYYY-MM-DD` key per day so a checkbox tap is an O(1) write, plus separate planning/application keys (`rt:planning:*`, `rt:job:applications`) so flexible work never rewrites routine history. An `rt:index` cache is rebuilt from the real day keys if it ever diverges. All app code goes through the `Store` interface.
 
 **Backups** — `localStorage` can still be lost if the user clears site data, removes the Home Screen app/storage container, or the device is lost. Export writes a full JSON file; import validates, migrates, previews changes, and requires confirmation.
 

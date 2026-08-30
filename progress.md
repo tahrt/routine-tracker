@@ -55,11 +55,18 @@ Current status as of 2026-08-30:
 - Verification after Phase 4 on 2026-08-30:
   - `npm test` — **10/10 files, 150/150 tests passed**
   - `npm run build` — passed
+- Phase 5 automated release gate has passed:
+  - final `npm test` — **10/10 files, 150/150 tests passed**
+  - final `npm run build` — TypeScript + Vite + service-worker build passed
+  - PWA regression is included and passing
+  - V4 → V5 migration + planning export/import round-trip are covered
+  - README updated for Planning + Application Tracker
+- Branch is currently ahead of `origin/main` by the local Planning V1 commits.
 - Nothing has been pushed or deployed for Planning V1 yet.
 
-Next measurable step:
+Remaining release gate:
 
-> Phase 5 release gate — final regression/status review, then on-device smoke + push/deploy only after explicit release approval.
+> Manual installed-PWA / iPhone-size smoke check, then explicit approval to push + deploy through the existing Safe Update flow.
 
 ## Current released state
 
