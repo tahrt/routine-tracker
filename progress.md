@@ -59,6 +59,14 @@ Latest verification:
 - `npm test` — **10/10 files, 153/153 tests passed**
 - `npm run build` — TypeScript + Vite + service-worker build passed
 
+V2.2.2 release result:
+
+- commit: `3542577`
+- pushed to `origin/main`
+- deployed service-worker build: `3542577dd679-20260830143957`
+- published successfully to `gh-pages`
+- schema remains v5; no re-import needed
+
 
 Current status as of 2026-08-30:
 
