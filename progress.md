@@ -17,6 +17,16 @@ Latest IA cleanup:
 - no schema/storage change; existing v5 planning data remains valid
 - new integration coverage verifies the Learning Workstream → Learning Path hierarchy
 
+V2.2 final verification + deployment:
+
+- `npm test` — **10/10 files, 151/151 tests passed**
+- `npm run build` — TypeScript + Vite + service-worker build passed
+- feature commit: `2bc2074`
+- pushed to `origin/main`
+- `npm run deploy` completed successfully
+- deployed service-worker build: `2bc207483200-20260830134908`
+- schema remains v5; existing imported planning data is unchanged
+
 
 Current status as of 2026-08-30:
 

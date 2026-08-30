@@ -217,7 +217,7 @@ Simplicity rule:
 
 ## Status
 
-V2.1 is implemented and deployed. V2.2 is implemented locally and awaiting final release verification.
+V2.1 is implemented and deployed. V2.2 is implemented, verified, pushed, and deployed.
 
 Release result:
 
@@ -248,5 +248,17 @@ Latest verification and deployment:
 - schema remains v5
 
 Remaining verification is the real installed-PWA smoke check on the existing iPhone Home Screen app.
+
+V2.2 release result:
+
+- 10/10 test files, **151/151 tests passed**
+- TypeScript + Vite + service-worker build passed
+- feature commit: `2bc2074`
+- pushed to `origin/main`
+- deployed service-worker build: `2bc207483200-20260830134908`
+- published successfully to `gh-pages`
+- schema remains v5; no reset or re-import required
+
+Remaining check is the real iPhone installed-PWA smoke test.
 
 Do not delete or re-add the Home Screen app.
