@@ -44,11 +44,22 @@ Current status as of 2026-08-30:
 - Verification after Phase 3 on 2026-08-30:
   - `npm test` — **10/10 files, 148/148 tests passed**
   - `npm run build` — passed
+- Phase 4 Replan + Weekly Review is complete locally:
+  - explicit Move / Defer / Cancel for missed actions
+  - Move keeps the original action as deferred and creates a new dated action
+  - under-scheduled Week commitments show AT RISK
+  - missed project deadlines remain explicit and never slide automatically
+  - Weekly Review persists wins, misses, bottleneck, and one adjustment
+  - Create next week copies commitments only; actions are never auto-carried
+  - deferred actions do not consume scheduled-block totals
+- Verification after Phase 4 on 2026-08-30:
+  - `npm test` — **10/10 files, 150/150 tests passed**
+  - `npm run build` — passed
 - Nothing has been pushed or deployed for Planning V1 yet.
 
 Next measurable step:
 
-> Phase 4 — implement explicit missed-action replan + Weekly Review so deadlines never slide silently and next week is adjusted from real capacity.
+> Phase 5 release gate — final regression/status review, then on-device smoke + push/deploy only after explicit release approval.
 
 ## Current released state
 

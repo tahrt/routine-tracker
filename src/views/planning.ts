@@ -93,13 +93,14 @@ export const renderWeekPlanning = ({
             commitment.targetBlocks > 0
               ? Math.min(100, Math.round((commitment.completedBlocks / commitment.targetBlocks) * 100))
               : 0;
-          return `<div class="planner-commitment">
+          const atRisk = commitment.scheduledBlocks < commitment.targetBlocks;
+          return `<div class="planner-commitment ${atRisk ? 'planner-commitment--risk' : ''}">
             <div class="planner-commitment__top">
               <strong>${esc(workstreamLabel(workstream))}</strong>
-              <span>${commitment.completedBlocks} / ${commitment.targetBlocks} blocks</span>
+              <span>${commitment.completedBlocks} done · ${commitment.scheduledBlocks} scheduled · ${commitment.targetBlocks} target</span>
             </div>
             <div class="planner-commitment__bar"><span style="width:${pct}%"></span></div>
-            <p>${esc(commitment.outcome)}</p>
+            <p>${atRisk ? 'AT RISK · ' : ''}${esc(commitment.outcome)}</p>
           </div>`;
         })
         .join('')
@@ -143,7 +144,7 @@ const workstreamOptions = (
     )
     .join('');
 
-const actionCard = (action: PlannedAction, workstreams: Readonly<Record<string, Workstream>>): string => {
+const actionCard = (action: PlannedAction, workstreams: Readonly<Record<string, Workstream>>, todayKey: string): string => {
   const workstream = workstreams[action.workstreamId];
   return `<article class="planner-manage-action">
     <div>
@@ -155,6 +156,12 @@ const actionCard = (action: PlannedAction, workstreams: Readonly<Record<string, 
       <button type="button" class="btn btn--tiny" data-action="planning-action-status" data-id="${esc(action.id)}" data-status="deferred">Defer</button>
       <button type="button" class="btn btn--tiny" data-action="planning-action-status" data-id="${esc(action.id)}" data-status="cancelled">Cancel</button>
     </div>
+    ${action.status !== 'done'
+      ? `<div class="planner-replan">
+          <input type="date" data-field="replanDate" value="${esc(action.date < todayKey ? todayKey : action.date)}">
+          <button type="button" class="btn btn--tiny" data-action="planning-replan-action" data-id="${esc(action.id)}">Move explicitly</button>
+        </div>`
+      : ''}
   </article>`;
 };
 
@@ -164,12 +171,14 @@ export const renderPlanningManager = ({
   habits,
   weekPlan,
   plannedActions,
+  weekSummary,
 }: {
   todayKey: string;
   workstreams: Readonly<Record<string, Workstream>>;
   habits: readonly Habit[];
   weekPlan: WeekPlan | undefined;
   plannedActions: Readonly<Record<string, PlannedAction>>;
+  weekSummary: WeekPlanningSummary;
 }): string => {
   const all = Object.values(workstreams);
   const active = all.filter((workstream) => workstream.execution.status === 'active');
@@ -276,8 +285,20 @@ export const renderPlanningManager = ({
       </section>
 
       <section class="planner-manager__section">
+        <div class="planner-section-head"><div><span>WEEKLY REVIEW</span><strong>${weekSummary.completedBlocks} done · ${weekSummary.plannedBlocks} scheduled · ${weekSummary.capacityBlocks} capacity</strong></div></div>
+        <label>Wins<textarea id="planner-review-wins" rows="2">${esc(weekPlan?.review?.wins ?? '')}</textarea></label>
+        <label>Misses<textarea id="planner-review-misses" rows="2">${esc(weekPlan?.review?.misses ?? '')}</textarea></label>
+        <label>Bottleneck<input id="planner-review-bottleneck" value="${esc(weekPlan?.review?.bottleneck ?? '')}" placeholder="What repeatedly got in the way?"></label>
+        <label>Adjustment for next week<input id="planner-review-adjustment" value="${esc(weekPlan?.review?.adjustment ?? '')}" placeholder="One change only"></label>
+        <div class="planner-review__actions">
+          <button type="button" class="btn btn--primary btn--tiny" data-action="planning-save-review">Save review</button>
+          <button type="button" class="btn btn--tiny" data-action="planning-create-next-week">Create next week</button>
+        </div>
+      </section>
+
+      <section class="planner-manager__section">
         <div class="planner-section-head"><div><span>PLANNED ACTIONS</span><strong>Explicit dates, no auto-carry</strong></div></div>
-        ${weekActions.length ? weekActions.map((action) => actionCard(action, workstreams)).join('') : '<p class="empty">No actions planned this week.</p>'}
+        ${weekActions.length ? weekActions.map((action) => actionCard(action, workstreams, todayKey)).join('') : '<p class="empty">No actions planned this week.</p>'}
 
         <div class="planner-create">
           <h3>Add action</h3>

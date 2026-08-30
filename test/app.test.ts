@@ -281,6 +281,51 @@ describe('app', () => {
     expect(app().textContent).toContain('Live pipeline');
   });
 
+  it('replans explicitly and saves a weekly review without carrying actions automatically', () => {
+    boot();
+    click(app().querySelector('[data-action="open-planner"]'));
+
+    (document.getElementById('planner-new-title') as HTMLInputElement).value = 'Project';
+    (document.getElementById('planner-new-type') as HTMLSelectElement).value = 'project';
+    (document.getElementById('planner-new-priority') as HTMLSelectElement).value = 'primary';
+    (document.getElementById('planner-new-habit') as HTMLSelectElement).value = 'personal';
+    click(app().querySelector('[data-action="planning-add-workstream"]'));
+
+    const commitment = app().querySelector<HTMLElement>('[data-commitment-workstream]');
+    expect(commitment).not.toBeNull();
+    (commitment?.querySelector('[data-field="targetBlocks"]') as HTMLInputElement).value = '2';
+    (commitment?.querySelector('[data-field="outcome"]') as HTMLInputElement).value = 'Close milestone';
+    click(app().querySelector('[data-action="planning-save-week"]'));
+
+    (document.getElementById('planner-action-title') as HTMLInputElement).value = 'Finish milestone';
+    (document.getElementById('planner-action-date') as HTMLInputElement).value = '2026-08-24';
+    click(app().querySelector('[data-action="planning-add-action"]'));
+
+    const actionCard = app().querySelector<HTMLElement>('.planner-manage-action');
+    expect(actionCard).not.toBeNull();
+    (actionCard?.querySelector('[data-field="replanDate"]') as HTMLInputElement).value = '2026-08-25';
+    click(actionCard?.querySelector('[data-action="planning-replan-action"]') ?? null);
+
+    const actions = JSON.parse(window.localStorage.getItem('rt:planning:actions') as string);
+    const statuses = Object.values(actions).map((action) => (action as { status: string }).status).sort();
+    expect(statuses).toEqual(['deferred', 'planned']);
+    expect(Object.values(actions).some((action) => (action as { date: string; status: string }).date === '2026-08-25' && (action as { status: string }).status === 'planned')).toBe(true);
+
+    (document.getElementById('planner-review-wins') as HTMLTextAreaElement).value = 'Kept scope small';
+    (document.getElementById('planner-review-misses') as HTMLTextAreaElement).value = 'One action moved';
+    (document.getElementById('planner-review-bottleneck') as HTMLInputElement).value = 'Evening energy';
+    (document.getElementById('planner-review-adjustment') as HTMLInputElement).value = 'Use morning block';
+    click(app().querySelector('[data-action="planning-save-review"]'));
+    click(app().querySelector('[data-action="planning-create-next-week"]'));
+
+    const weeks = JSON.parse(window.localStorage.getItem('rt:planning:weeks') as string);
+    expect(Object.values(weeks).some((week) => (week as { startsOn: string }).startsOn === '2026-08-31')).toBe(true);
+    expect(Object.values(weeks).some((week) => (week as { startsOn: string }).startsOn === '2026-08-24' && (week as { review?: { bottleneck: string } }).review?.bottleneck === 'Evening energy')).toBe(true);
+
+    const after = JSON.parse(window.localStorage.getItem('rt:planning:actions') as string);
+    expect(Object.values(after)).toHaveLength(2); // next week creation does not copy actions
+  });
+
 });
 
 describe('template editing', () => {

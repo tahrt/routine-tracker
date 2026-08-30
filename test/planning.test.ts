@@ -216,6 +216,37 @@ describe('week planning', () => {
     expect(weekPlanForDate('2026-09-03', { week: plan })?.id).toBe('2026-W36');
   });
 
+  it('does not count deferred actions as still scheduled', () => {
+    const actions: Record<string, PlannedAction> = {
+      deferred: {
+        id: 'deferred',
+        date: '2026-09-01',
+        workstreamId: 'job',
+        title: 'Old plan',
+        focusBlocks: 2,
+        status: 'deferred',
+      },
+      replanned: {
+        id: 'replanned',
+        date: '2026-09-02',
+        workstreamId: 'job',
+        title: 'New plan',
+        focusBlocks: 1,
+        status: 'planned',
+      },
+    };
+
+    const out = weekPlanningSummary({
+      dateK: '2026-09-03',
+      capacityProfiles: CAPACITY,
+      weekPlans: { week: plan },
+      plannedActions: actions,
+    });
+
+    expect(out.plannedBlocks).toBe(1);
+    expect(out.commitments.find((item) => item.workstreamId === 'job')?.scheduledBlocks).toBe(1);
+  });
+
   it('summarizes capacity, planned blocks, completed blocks and commitments', () => {
     const actions: Record<string, PlannedAction> = {
       a: {

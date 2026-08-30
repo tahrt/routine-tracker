@@ -32,6 +32,7 @@ export interface TodayPlan {
 export interface WeekCommitmentProgress {
   workstreamId: string;
   targetBlocks: number;
+  scheduledBlocks: number;
   completedBlocks: number;
   outcome: string;
 }
@@ -259,7 +260,7 @@ export const weekPlanningSummary = ({
   const plan = weekPlanForDate(dateK, weekPlans);
 
   const actions = Object.values(plannedActions).filter(
-    (action) => keySet.has(action.date) && action.status !== 'cancelled',
+    (action) => keySet.has(action.date) && (action.status === 'planned' || action.status === 'done'),
   );
   const capacityBlocks = keys.reduce((sum, key) => sum + capacityForDate(key, capacityProfiles), 0);
   const plannedBlocks = actions.reduce((sum, action) => sum + fitBlocks(action.focusBlocks), 0);
@@ -268,12 +269,16 @@ export const weekPlanningSummary = ({
     .reduce((sum, action) => sum + fitBlocks(action.focusBlocks), 0);
 
   const commitments = (plan?.commitments ?? []).map((commitment) => {
+    const scheduled = actions
+      .filter((action) => action.workstreamId === commitment.workstreamId)
+      .reduce((sum, action) => sum + fitBlocks(action.focusBlocks), 0);
     const completed = actions
       .filter((action) => action.workstreamId === commitment.workstreamId && action.status === 'done')
       .reduce((sum, action) => sum + fitBlocks(action.focusBlocks), 0);
     return {
       workstreamId: commitment.workstreamId,
       targetBlocks: Math.max(0, commitment.targetBlocks),
+      scheduledBlocks: scheduled,
       completedBlocks: completed,
       outcome: commitment.outcome,
     };

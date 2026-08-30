@@ -152,12 +152,19 @@ export const startApp = (): (() => void) => {
       body = renderApplications({ todayKey: t, applications: store.getJobApplications() });
     } else if (state.planningOpen) {
       const weekPlan = weekPlanForDate(t, store.getWeekPlans());
+      const planningSummary = weekPlanningSummary({
+        dateK: t,
+        capacityProfiles: store.getCapacityProfiles(),
+        weekPlans: store.getWeekPlans(),
+        plannedActions: store.getPlannedActions(),
+      });
       body = renderPlanningManager({
         todayKey: t,
         workstreams: store.getWorkstreams(),
         habits,
         weekPlan,
         plannedActions: store.getPlannedActions(),
+        weekSummary: planningSummary,
       });
     } else if (state.editing) {
       body = renderEditTemplate({ ...state.editing, dirty: dirtyWeekdays(), habits });
@@ -617,6 +624,61 @@ export const startApp = (): (() => void) => {
       const id = `action_${globalThis.crypto?.randomUUID?.().slice(0, 8) ?? Math.random().toString(36).slice(2, 10)}`;
       store.upsertPlannedAction({ id, date, workstreamId, title, focusBlocks: blocks, due, linkedHabitId: workstream.linkedHabitId ?? null, status: 'planned' });
       toast('Action planned.');
+      render();
+    },
+
+    'planning-replan-action': (el) => {
+      const id = el.dataset.id;
+      if (!id) return;
+      const action = store.getPlannedActions()[id];
+      const card = el.closest<HTMLElement>('.planner-manage-action');
+      const nextDate = (card?.querySelector('[data-field="replanDate"]') as HTMLInputElement | null)?.value ?? '';
+      if (!action || !nextDate) return void toast('Choose a new date first.', 'error');
+      if (nextDate === action.date && action.status === 'planned') return void toast('Choose a different date to replan.', 'error');
+      store.upsertPlannedAction({ ...action, status: 'deferred' });
+      const nextId = `action_${globalThis.crypto?.randomUUID?.().slice(0, 8) ?? Math.random().toString(36).slice(2, 10)}`;
+      store.upsertPlannedAction({ ...action, id: nextId, date: nextDate, status: 'planned' });
+      toast(`Moved explicitly to ${nextDate}. Original kept as deferred.`);
+      render();
+    },
+
+    'planning-save-review': () => {
+      const t = today();
+      const d = parseKey(t);
+      const offset = (d.getDay() + 6) % 7;
+      d.setDate(d.getDate() - offset);
+      const monday = dateKey(d);
+      const current = weekPlanForDate(t, store.getWeekPlans()) ?? {
+        id: `week:${monday}`,
+        startsOn: monday,
+        commitments: [],
+      };
+      const wins = (document.getElementById('planner-review-wins') as HTMLTextAreaElement | null)?.value.trim() ?? '';
+      const misses = (document.getElementById('planner-review-misses') as HTMLTextAreaElement | null)?.value.trim() ?? '';
+      const bottleneck = (document.getElementById('planner-review-bottleneck') as HTMLInputElement | null)?.value.trim() ?? '';
+      const adjustment = (document.getElementById('planner-review-adjustment') as HTMLInputElement | null)?.value.trim() ?? '';
+      store.upsertWeekPlan({
+        ...current,
+        review: { completedAt: nowIso(), wins, misses, bottleneck, adjustment },
+      });
+      toast('Weekly Review saved.');
+      render();
+    },
+
+    'planning-create-next-week': () => {
+      const t = today();
+      const current = weekPlanForDate(t, store.getWeekPlans());
+      if (!current) return void toast('Save this Week Plan first.', 'error');
+      const monday = parseKey(current.startsOn);
+      const nextStartsOn = dateKey(addDays(monday, 7));
+      const existing = Object.values(store.getWeekPlans()).find((plan) => plan.startsOn === nextStartsOn);
+      if (existing) return void toast('Next week already exists.');
+      store.upsertWeekPlan({
+        id: `week:${nextStartsOn}`,
+        startsOn: nextStartsOn,
+        commitments: structuredClone(current.commitments),
+      });
+      toast('Next week created. Actions were not carried over.');
       render();
     },
 
