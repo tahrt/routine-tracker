@@ -23,11 +23,22 @@ Current status as of 2026-08-30:
   - `npm test` — **9/9 files, 136/136 tests passed**
   - `npm run build` — TypeScript + Vite + service-worker build passed
   - service-worker build: `866e28b6dbc2-20260830115643`
+- Phase 2 Week + Today Planning UI is complete locally:
+  - deterministic capacity-aware selector in `src/lib/planning.ts`
+  - Today shows Focus Block capacity, Must Win / Next, and explicit deadline-risk warnings
+  - Week shows total capacity, planned/completed blocks, and commitment progress
+  - local Planning manager can create/edit Workstreams, allocate Week commitments, and add dated Planned Actions
+  - action Done / Defer / Cancel is explicit; missed actions do not auto-carry
+  - a linked action completes an existing matching routine habit only through the normal DayRecord snapshot path
+  - new planning CSS lives in `src/redesign.css`
+- Verification after Phase 2 on 2026-08-30:
+  - `npm test` — **10/10 files, 147/147 tests passed**
+  - `npm run build` — TypeScript + Vite + service-worker build passed
 - Nothing has been pushed or deployed for Planning V1 yet.
 
 Next measurable step:
 
-> Phase 2 — add the Planning section to Today + Week, with deterministic capacity-aware selection and no change to historical habit semantics.
+> Phase 3 — build the Application Tracker UI on top of the already-persisted JobApplication model and feed due application actions into Today.
 
 ## Current released state
 

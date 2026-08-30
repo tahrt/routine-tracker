@@ -197,6 +197,54 @@ describe('app', () => {
     expect(window.localStorage.getItem('rt:day:2026-08-26')).not.toBeNull();
     expect(window.localStorage.getItem('rt:day:2026-08-27')).toBeNull();
   });
+  it('opens the planner, creates a workstream and plans an action', () => {
+    boot();
+    expect(app().textContent).toContain('2 Focus Blocks');
+    click(app().querySelector('[data-action="open-planner"]'));
+    expect(app().textContent).toContain('Make the week finite.');
+
+    (document.getElementById('planner-new-title') as HTMLInputElement).value = 'Job Search';
+    (document.getElementById('planner-new-type') as HTMLSelectElement).value = 'career';
+    (document.getElementById('planner-new-priority') as HTMLSelectElement).value = 'north-star';
+    (document.getElementById('planner-new-habit') as HTMLSelectElement).value = 'jobsearch';
+    click(app().querySelector('[data-action="planning-add-workstream"]'));
+
+    const workstreams = JSON.parse(window.localStorage.getItem('rt:planning:workstreams') as string);
+    const id = Object.keys(workstreams)[0]!;
+    expect(workstreams[id].title).toBe('Job Search');
+
+    (document.getElementById('planner-action-title') as HTMLInputElement).value = 'Prepare application';
+    (document.getElementById('planner-action-date') as HTMLInputElement).value = '2026-08-24';
+    click(app().querySelector('[data-action="planning-add-action"]'));
+
+    const actions = JSON.parse(window.localStorage.getItem('rt:planning:actions') as string);
+    expect(Object.values(actions)).toHaveLength(1);
+    click(app().querySelector('[data-action="close-planner"]'));
+    expect(app().textContent).toContain('Prepare application');
+    expect(app().textContent).toContain('MUST WIN');
+  });
+
+  it('completing a linked planned action uses the existing habit snapshot path', () => {
+    boot();
+    click(app().querySelector('[data-action="open-planner"]'));
+    (document.getElementById('planner-new-title') as HTMLInputElement).value = 'Job Search';
+    (document.getElementById('planner-new-type') as HTMLSelectElement).value = 'career';
+    (document.getElementById('planner-new-priority') as HTMLSelectElement).value = 'north-star';
+    (document.getElementById('planner-new-habit') as HTMLSelectElement).value = 'jobsearch';
+    click(app().querySelector('[data-action="planning-add-workstream"]'));
+    (document.getElementById('planner-action-title') as HTMLInputElement).value = 'Submit application';
+    (document.getElementById('planner-action-date') as HTMLInputElement).value = '2026-08-24';
+    click(app().querySelector('[data-action="planning-add-action"]'));
+    click(app().querySelector('[data-action="close-planner"]'));
+
+    click(app().querySelector('[data-action="planning-action-status"][data-status="done"]'));
+    const day = JSON.parse(window.localStorage.getItem('rt:day:2026-08-24') as string);
+    expect(day.tasks.find((task: { habit: string; done: boolean }) => task.habit === 'jobsearch').done).toBe(true);
+
+    const actions = JSON.parse(window.localStorage.getItem('rt:planning:actions') as string);
+    expect((Object.values(actions)[0] as { status: string }).status).toBe('done');
+  });
+
 });
 
 describe('template editing', () => {

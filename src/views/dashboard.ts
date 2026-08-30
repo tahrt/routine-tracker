@@ -13,6 +13,7 @@ export interface DashboardViewProps {
   learningProgress: LearningProgress;
   greeting: string;
   outOfSync: boolean;
+  planningHtml?: string;
 }
 
 const iconForTask = (task: DayTask): string => {
@@ -54,6 +55,7 @@ export const renderTodayDashboard = ({
   learningProgress,
   greeting,
   outOfSync,
+  planningHtml = '',
 }: DashboardViewProps): string => {
   const preview = record ? null : previewTasks(dateKey, templates);
   const tasks = record?.tasks ?? preview?.tasks ?? [];
@@ -106,6 +108,8 @@ export const renderTodayDashboard = ({
         : ''
       }
 
+      ${planningHtml}
+
       <section class="today-score">
         <div class="today-ring" style="--rate:${ringRate}">
           <div class="today-ring__inner"><strong>${ringRate}%</strong></div>
@@ -132,7 +136,7 @@ export const renderTodayDashboard = ({
 
       ${upNext && !disabled
         ? `<section class="up-next">
-             <div class="up-next__label">UP NEXT</div>
+             <div class="up-next__label">${planningHtml ? 'ROUTINE NEXT' : 'UP NEXT'}</div>
              <div class="up-next__main">
                <span class="up-next__icon">${iconForTask(upNext)}</span>
                <div class="up-next__copy">

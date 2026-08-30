@@ -11,6 +11,7 @@ export interface WeekViewProps {
   anchorKey: string;
   todayKey: string;
   records: Readonly<Record<string, DayRecord | undefined>>;
+  planningHtml?: string;
 }
 
 const bar = (key: string, todayKey: string, rec: DayRecord | undefined): string => {
@@ -37,7 +38,7 @@ const bar = (key: string, todayKey: string, rec: DayRecord | undefined): string 
     </${future ? 'div' : 'button'}>`;
 };
 
-export const renderWeek = ({ anchorKey, todayKey, records }: WeekViewProps): string => {
+export const renderWeek = ({ anchorKey, todayKey, records, planningHtml = '' }: WeekViewProps): string => {
   const anchor = parseKey(anchorKey);
   const monday = getMonday(anchor);
   const keys = weekKeys(anchor);
@@ -64,6 +65,8 @@ export const renderWeek = ({ anchorKey, todayKey, records }: WeekViewProps): str
         <button class="navbtn" type="button" data-action="week-nav" data-delta="1"
           aria-label="Next week" ${atCurrentWeek ? 'disabled' : ''}>›</button>
       </header>
+
+      ${planningHtml}
 
       <div class="week__avg">
         <span class="week__avgvalue">${sum.average}<span class="meter__pct">%</span></span>

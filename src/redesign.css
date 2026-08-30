@@ -1348,3 +1348,339 @@ a {
     grid-column: 1 / -1;
   }
 }
+
+
+/* ------------------------------------------------------ Planning Layer V1 */
+
+.planner-today,
+.planner-week,
+.planner-manager__section {
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 92% 0%, rgba(255,181,46,.08), transparent 30%),
+    linear-gradient(145deg, rgba(17,31,49,.94), rgba(9,19,32,.97));
+  box-shadow: inset 0 1px rgba(255,255,255,.025);
+}
+
+.planner-today,
+.planner-week {
+  margin: 14px 0;
+  padding: 15px;
+}
+
+.planner-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.planner-section-head > div {
+  min-width: 0;
+}
+
+.planner-section-head span,
+.planner-action__eyebrow,
+.planner-workstream__head span {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  color: #8fa4bc;
+}
+
+.planner-section-head strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  color: #f3f7fb;
+}
+
+.planner-action {
+  padding: 13px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 14px;
+  background: rgba(255,255,255,.025);
+}
+
+.planner-action + .planner-action {
+  margin-top: 8px;
+}
+
+.planner-action--must {
+  border-color: rgba(255,181,46,.35);
+  background:
+    radial-gradient(circle at 90% 10%, rgba(255,181,46,.11), transparent 38%),
+    rgba(255,181,46,.035);
+}
+
+.planner-action__eyebrow {
+  color: #f1bd62;
+  margin-bottom: 7px;
+}
+
+.planner-action__body {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.planner-action__body h3,
+.planner-workstream h3,
+.planner-create h3,
+.planner-manage-action strong {
+  margin: 0;
+  color: #f5f8fc;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.planner-action__body p,
+.planner-commitment p,
+.planner-manager__head p,
+.planner-empty span,
+.planner-manage-action span {
+  margin: 4px 0 0;
+  color: #8fa4bc;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.planner-action__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.planner-warning {
+  margin: 0 0 10px;
+  padding: 9px 10px;
+  border: 1px solid rgba(255,181,46,.26);
+  border-radius: 12px;
+  background: rgba(255,181,46,.055);
+  color: #e8c27d;
+  font-size: 11px;
+}
+
+.planner-capacity {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 11px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,.055);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: #748aa3;
+}
+
+.planner-empty {
+  display: grid;
+  gap: 5px;
+  padding: 13px;
+  border: 1px dashed rgba(255,255,255,.11);
+  border-radius: 13px;
+  background: rgba(255,255,255,.018);
+}
+
+.planner-empty strong {
+  color: #dce6f0;
+  font-size: 12px;
+}
+
+.planner-empty .btn {
+  justify-self: start;
+  margin-top: 4px;
+}
+
+.planner-empty--compact {
+  margin: 0;
+}
+
+.planner-commitment + .planner-commitment {
+  margin-top: 10px;
+}
+
+.planner-commitment__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.planner-commitment__top strong {
+  color: #e7edf4;
+}
+
+.planner-commitment__top span {
+  color: #8fa4bc;
+  font-family: var(--font-mono);
+}
+
+.planner-commitment__bar {
+  height: 5px;
+  margin-top: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.065);
+}
+
+.planner-commitment__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #d9952f, #f3c66e);
+}
+
+.planner-manager {
+  padding-bottom: 20px;
+}
+
+.planner-manager__head {
+  padding: 8px 2px 16px;
+}
+
+.planner-manager__head h1 {
+  margin: 6px 0 0;
+  font-size: clamp(24px, 7vw, 34px);
+}
+
+.planner-manager__section {
+  margin: 12px 0;
+  padding: 15px;
+}
+
+.planner-workstream,
+.planner-create,
+.planner-commitment-edit,
+.planner-manage-action {
+  border: 1px solid rgba(255,255,255,.065);
+  border-radius: 14px;
+  background: rgba(255,255,255,.02);
+}
+
+.planner-workstream,
+.planner-create {
+  padding: 13px;
+}
+
+.planner-workstream + .planner-workstream,
+.planner-create {
+  margin-top: 10px;
+}
+
+.planner-workstream__head,
+.planner-manage-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.planner-workstream__head {
+  margin-bottom: 11px;
+}
+
+.planner-workstream label,
+.planner-create label,
+.planner-commitment-edit label {
+  display: grid;
+  gap: 5px;
+  margin-top: 9px;
+  color: #8fa4bc;
+  font-size: 10px;
+}
+
+.planner-workstream input,
+.planner-workstream select,
+.planner-workstream textarea,
+.planner-create input,
+.planner-create select,
+.planner-commitment-edit input {
+  width: 100%;
+  min-height: 40px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: rgba(4,12,22,.55);
+  color: #edf3f8;
+  font: inherit;
+}
+
+.planner-workstream textarea {
+  resize: vertical;
+}
+
+.planner-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.planner-workstream > .btn,
+.planner-create > .btn,
+.planner-manager__section > .btn {
+  margin-top: 11px;
+}
+
+.planner-commitment-edit {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) 72px minmax(120px, 1.5fr);
+  gap: 8px;
+  align-items: end;
+  padding: 10px;
+}
+
+.planner-commitment-edit + .planner-commitment-edit {
+  margin-top: 7px;
+}
+
+.planner-commitment-edit > strong {
+  align-self: center;
+  color: #e8eef5;
+  font-size: 12px;
+}
+
+.planner-manage-action {
+  padding: 11px;
+}
+
+.planner-manage-action + .planner-manage-action {
+  margin-top: 7px;
+}
+
+.planner-manage-action > div:first-child {
+  min-width: 0;
+  display: grid;
+}
+
+@media (max-width: 520px) {
+  .planner-action__body,
+  .planner-workstream__head,
+  .planner-manage-action {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .planner-action__buttons {
+    width: 100%;
+  }
+
+  .planner-action__buttons .btn {
+    flex: 1 1 auto;
+  }
+
+  .planner-form-grid,
+  .planner-commitment-edit {
+    grid-template-columns: 1fr;
+  }
+
+  .planner-commitment-edit > strong {
+    margin-bottom: 2px;
+  }
+}

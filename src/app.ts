@@ -8,15 +8,25 @@
 import { LEARNING_PATHS } from './config/learning';
 import { addDays, dateKey, isFutureKey, parseKey, todayKey as computeTodayKey, weekKeys } from './lib/date';
 import { currentTemplate, isOutOfSync, materializeDay, newTaskId, syncRecordToTemplate } from './lib/day';
+import { selectTodayPlan, weekPlanForDate, weekPlanningSummary } from './lib/planning';
 import { toggleTask } from './lib/stats';
 import { getStore, storageIsEphemeral } from './store';
-import type { DayRecord, DayStatus, WeekTemplate } from './types';
+import type {
+  DayRecord,
+  DayStatus,
+  PlannedActionStatus,
+  WeekTemplate,
+  WorkstreamPriority,
+  WorkstreamStatus,
+  WorkstreamType,
+} from './types';
 import { toast } from './ui/dom';
 import { renderTodayDashboard } from './views/dashboard';
 import { renderDay } from './views/day';
 import { renderEditTemplate } from './views/editTemplate';
 import { renderInsights } from './views/insights';
 import { renderLearningOverview, renderLearningPath } from './views/learning';
+import { renderPlanningManager, renderTodayPlanning, renderWeekPlanning } from './views/planning';
 import { renderSettings, type PendingImport } from './views/settings';
 import { renderWeek } from './views/week';
 
@@ -33,6 +43,7 @@ interface AppState {
   /** Set when a specific day is opened from the Week view. */
   openDay: string | null;
   learningPathId: string | null;
+  planningOpen: boolean;
   rawOpen: boolean;
   resetArmed: boolean;
   pendingImport: (PendingImport & { raw: unknown }) | null;
@@ -60,6 +71,7 @@ export const startApp = (): (() => void) => {
     weekAnchor: today(),
     openDay: null,
     learningPathId: null,
+    planningOpen: false,
     rawOpen: false,
     resetArmed: false,
     pendingImport: null,
@@ -133,7 +145,16 @@ export const startApp = (): (() => void) => {
     const habits = store.getHabits();
 
     let body: string;
-    if (state.editing) {
+    if (state.planningOpen) {
+      const weekPlan = weekPlanForDate(t, store.getWeekPlans());
+      body = renderPlanningManager({
+        todayKey: t,
+        workstreams: store.getWorkstreams(),
+        habits,
+        weekPlan,
+        plannedActions: store.getPlannedActions(),
+      });
+    } else if (state.editing) {
       body = renderEditTemplate({ ...state.editing, dirty: dirtyWeekdays(), habits });
     } else if (state.openDay) {
       const record = store.getDay(state.openDay);
@@ -151,7 +172,20 @@ export const startApp = (): (() => void) => {
     } else if (state.tab === 'today') {
       body =
         state.todayMode === 'week'
-          ? renderWeek({ anchorKey: state.weekAnchor, todayKey: t, records: recordsFor(weekKeys(parseKey(state.weekAnchor))) })
+          ? renderWeek({
+              anchorKey: state.weekAnchor,
+              todayKey: t,
+              records: recordsFor(weekKeys(parseKey(state.weekAnchor))),
+              planningHtml: renderWeekPlanning({
+                summary: weekPlanningSummary({
+                  dateK: state.weekAnchor,
+                  capacityProfiles: store.getCapacityProfiles(),
+                  weekPlans: store.getWeekPlans(),
+                  plannedActions: store.getPlannedActions(),
+                }),
+                workstreams: store.getWorkstreams(),
+              }),
+            })
           : renderTodayDashboard({
               dateKey: t,
               record: store.getDay(t),
@@ -159,6 +193,16 @@ export const startApp = (): (() => void) => {
               learningPaths: LEARNING_PATHS,
               learningProgress: store.getLearningProgress(),
               greeting: greeting(),
+              planningHtml: renderTodayPlanning({
+                plan: selectTodayPlan({
+                  dateK: t,
+                  capacityProfiles: store.getCapacityProfiles(),
+                  workstreams: store.getWorkstreams(),
+                  plannedActions: store.getPlannedActions(),
+                  jobApplications: store.getJobApplications(),
+                }),
+                workstreams: store.getWorkstreams(),
+              }),
               outOfSync:
                 store.getDay(t) !== undefined &&
                 !state.syncDismissed.has(t) &&
@@ -234,6 +278,7 @@ export const startApp = (): (() => void) => {
     state.tab = tab;
     state.openDay = null;
     state.learningPathId = null;
+    state.planningOpen = false;
     state.editing = null;
     if (tab === 'today') {
       state.todayMode = 'today';
@@ -289,6 +334,18 @@ export const startApp = (): (() => void) => {
 
   const ACTIONS: Record<string, (el: HTMLElement) => void> = {
     tab: (el) => openTab((el.dataset.tab as Tab) ?? 'today'),
+
+    'open-planner': () => {
+      state.planningOpen = true;
+      state.openDay = null;
+      state.editing = null;
+      render();
+    },
+
+    'close-planner': () => {
+      state.planningOpen = false;
+      render();
+    },
 
     back: () => {
       state.openDay = null;
@@ -465,6 +522,100 @@ export const startApp = (): (() => void) => {
       const archived = el.dataset.archived === 'true';
       store.setHabitArchived(id, !archived);
       toast(archived ? 'Habit restored.' : 'Habit archived. History is preserved.');
+      render();
+    },
+
+    'planning-add-workstream': () => {
+      const title = (document.getElementById('planner-new-title') as HTMLInputElement | null)?.value.trim() ?? '';
+      if (!title) return void toast('Workstream needs a title.', 'error');
+      const type = ((document.getElementById('planner-new-type') as HTMLSelectElement | null)?.value ?? 'project') as WorkstreamType;
+      const priority = ((document.getElementById('planner-new-priority') as HTMLSelectElement | null)?.value ?? 'primary') as WorkstreamPriority;
+      const habit = (document.getElementById('planner-new-habit') as HTMLSelectElement | null)?.value || null;
+      const id = `ws_${globalThis.crypto?.randomUUID?.().slice(0, 8) ?? Math.random().toString(36).slice(2, 10)}`;
+      store.upsertWorkstream({
+        id,
+        type,
+        title,
+        outcome: { goal: '', priority },
+        plan: { deadline: null, definitionOfDone: [] },
+        execution: { status: 'active', milestone: null, weeklyCommitment: null, nextAction: null },
+        linkedHabitId: habit,
+      });
+      toast('Workstream added.');
+      render();
+    },
+
+    'planning-save-workstream': (el) => {
+      const id = el.dataset.id;
+      if (!id) return;
+      const current = store.getWorkstreams()[id];
+      const card = el.closest<HTMLElement>('[data-workstream-id]');
+      if (!current || !card) return;
+      const field = (name: string): HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null =>
+        card.querySelector(`[data-field="${name}"]`);
+      const status = (field('status') as HTMLSelectElement | null)?.value as WorkstreamStatus | undefined;
+      const deadline = (field('deadline') as HTMLInputElement | null)?.value || null;
+      const dod = (field('definitionOfDone') as HTMLTextAreaElement | null)?.value
+        .split('\n').map((v) => v.trim()).filter(Boolean) ?? [];
+      store.upsertWorkstream({
+        ...current,
+        outcome: { ...current.outcome, goal: (field('goal') as HTMLInputElement | null)?.value.trim() ?? '' },
+        plan: { deadline, definitionOfDone: dod },
+        execution: {
+          ...current.execution,
+          status: status ?? current.execution.status,
+          milestone: (field('milestone') as HTMLInputElement | null)?.value.trim() || null,
+          nextAction: (field('nextAction') as HTMLInputElement | null)?.value.trim() || null,
+        },
+        linkedHabitId: (field('habit') as HTMLSelectElement | null)?.value || null,
+      });
+      toast('Workstream saved.');
+      render();
+    },
+
+    'planning-save-week': () => {
+      const commitments = [...document.querySelectorAll<HTMLElement>('[data-commitment-workstream]')].map((row) => ({
+        workstreamId: row.dataset.commitmentWorkstream ?? '',
+        targetBlocks: Math.max(0, Math.floor(Number((row.querySelector('[data-field="targetBlocks"]') as HTMLInputElement | null)?.value ?? 0))),
+        outcome: (row.querySelector('[data-field="outcome"]') as HTMLInputElement | null)?.value.trim() ?? '',
+      })).filter((item) => item.workstreamId && item.targetBlocks > 0);
+      const monday = dateKey((() => { const d = parseKey(today()); const offset = (d.getDay() + 6) % 7; d.setDate(d.getDate() - offset); return d; })());
+      store.upsertWeekPlan({ id: `week:${monday}`, startsOn: monday, commitments });
+      toast('Week Plan saved.');
+      render();
+    },
+
+    'planning-add-action': () => {
+      const workstreamId = (document.getElementById('planner-action-workstream') as HTMLSelectElement | null)?.value ?? '';
+      const title = (document.getElementById('planner-action-title') as HTMLInputElement | null)?.value.trim() ?? '';
+      const date = (document.getElementById('planner-action-date') as HTMLInputElement | null)?.value ?? '';
+      const blocks = Math.max(1, Math.min(3, Math.floor(Number((document.getElementById('planner-action-blocks') as HTMLInputElement | null)?.value ?? 1))));
+      const due = (document.getElementById('planner-action-due') as HTMLInputElement | null)?.value || null;
+      const workstream = store.getWorkstreams()[workstreamId];
+      if (!workstream || !title || !date) return void toast('Action needs workstream, date, and title.', 'error');
+      const id = `action_${globalThis.crypto?.randomUUID?.().slice(0, 8) ?? Math.random().toString(36).slice(2, 10)}`;
+      store.upsertPlannedAction({ id, date, workstreamId, title, focusBlocks: blocks, due, linkedHabitId: workstream.linkedHabitId ?? null, status: 'planned' });
+      toast('Action planned.');
+      render();
+    },
+
+    'planning-action-status': (el) => {
+      const id = el.dataset.id;
+      const status = el.dataset.status as PlannedActionStatus | undefined;
+      if (!id || !status) return;
+      const action = store.getPlannedActions()[id];
+      if (!action) return;
+      store.upsertPlannedAction({ ...action, status });
+      if (status === 'done' && action.date === today() && action.linkedHabitId) {
+        const rec = ensureRecord(today());
+        if (rec.status === 'active') {
+          const matches = rec.tasks.filter((task) => task.core && task.habit === action.linkedHabitId);
+          if (matches.length === 1 && matches[0] && !matches[0].done) {
+            store.setDay(today(), { ...rec, tasks: rec.tasks.map((task) => task.id === matches[0]?.id ? { ...task, done: true } : task) }, nowIso());
+          }
+        }
+      }
+      toast(status === 'deferred' ? 'Deferred. It will not move dates automatically.' : `Action ${status}.`);
       render();
     },
 
