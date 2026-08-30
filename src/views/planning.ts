@@ -8,7 +8,7 @@ import type {
   WeekPlan,
   Workstream,
 } from '../types';
-import type { TodayPlan, WeekPlanningSummary } from '../lib/planning';
+import type { TodayPlan, WeekCommitmentProgress, WeekPlanningSummary } from '../lib/planning';
 import { cx, esc } from '../ui/dom';
 
 const priorityLabel = (priority: Workstream['outcome']['priority']): string => {
@@ -467,6 +467,7 @@ export const renderWorkstreamDetail = ({
   jobApplications,
   habits,
   domainHtml = '',
+  weekProgress,
 }: {
   workstream: Workstream;
   todayKey: string;
@@ -475,6 +476,7 @@ export const renderWorkstreamDetail = ({
   jobApplications: Readonly<Record<string, JobApplication>>;
   habits: readonly Habit[];
   domainHtml?: string;
+  weekProgress?: WeekCommitmentProgress;
 }): string => {
   const allActions = activeScheduledActions(plannedActions, workstream.id);
   const upcoming = allActions.filter((action) => action.date >= todayKey);
@@ -517,6 +519,11 @@ export const renderWorkstreamDetail = ({
         .join('')
     : '<p class="empty">No upcoming action is scheduled for this workstream.</p>';
 
+  const weeklyPct =
+    weekProgress && weekProgress.targetBlocks > 0
+      ? Math.min(100, Math.round((weekProgress.completedBlocks / weekProgress.targetBlocks) * 100))
+      : null;
+
   const relatedApplications =
     workstream.type === 'career'
       ? Object.values(jobApplications).filter(
@@ -544,6 +551,14 @@ export const renderWorkstreamDetail = ({
         <div><span>CURRENT MILESTONE</span><strong>${esc(workstream.execution.milestone ?? 'No milestone')}</strong></div>
         <div><span>NEXT ACTION</span><strong>${esc(workstream.execution.nextAction ?? 'No next action')}</strong></div>
       </section>
+
+      ${weeklyPct === null
+        ? ''
+        : `<section class="workstream-week-progress">
+            <div><span>THIS WEEK</span><strong>${weeklyPct}%</strong></div>
+            <div class="workstream-week-progress__bar"><span style="width:${weeklyPct}%"></span></div>
+            <small>${weekProgress?.completedBlocks ?? 0} done · ${weekProgress?.scheduledBlocks ?? 0} scheduled · ${weekProgress?.targetBlocks ?? 0} target blocks</small>
+          </section>`}
 
       ${domainHtml}
 

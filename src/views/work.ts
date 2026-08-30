@@ -67,6 +67,10 @@ export const renderWorkHome = ({
     ? active
         .map((workstream) => {
           const commitment = commitmentByWorkstream.get(workstream.id);
+          const weeklyPct =
+            commitment && commitment.targetBlocks > 0
+              ? Math.min(100, Math.round((commitment.completedBlocks / commitment.targetBlocks) * 100))
+              : null;
           const blockText = commitment
             ? `${commitment.completedBlocks} done · ${commitment.scheduledBlocks}/${commitment.targetBlocks} blocks`
             : 'No weekly target';
@@ -93,10 +97,16 @@ export const renderWorkHome = ({
           return `<button type="button" class="work-card" data-action="open-workstream" data-id="${esc(workstream.id)}">
             <span class="work-card__top">
               <span>${priorityLabel(workstream.outcome.priority)}</span>
-              <span>${esc(blockText)}</span>
+              <span>${weeklyPct === null ? esc(blockText) : `THIS WEEK · ${weeklyPct}%`}</span>
             </span>
             <strong>${esc(workstream.title)}</strong>
             <span class="work-card__next">${esc(next)}</span>
+            ${weeklyPct === null
+              ? ''
+              : `<span class="work-card__progress" role="img" aria-label="This week ${weeklyPct}% complete">
+                   <span style="width:${weeklyPct}%"></span>
+                 </span>
+                 <span class="work-card__progressmeta">${esc(blockText)}</span>`}
             <span class="work-card__bottom">
               <span>${esc(deadlineLabel(workstream.plan.deadline))}${domainMeta ? ` · ${esc(domainMeta)}` : ''}</span>
               <span aria-hidden="true">›</span>

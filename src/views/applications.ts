@@ -60,35 +60,44 @@ const card = (application: JobApplication, todayKey: string): string => {
       </summary>
 
       <div class="application-row__editor">
-        <div class="planner-form-grid">
+        <div class="planner-form-grid application-row__quickedit">
           <label>Stage
             <select data-field="stage" aria-label="Stage for ${esc(application.company)}">${stageOptions(application.stage)}</select>
           </label>
-          <label>Fit 1–5
-            <input data-field="fitScore" type="number" min="1" max="5" value="${application.fitScore ?? ''}">
-          </label>
           <label>Next action due
             <input data-field="nextActionDue" type="date" value="${esc(application.nextActionDue ?? '')}">
-          </label>
-          <label>Next event
-            <input data-field="nextEventAt" type="date" value="${esc(application.nextEventAt?.slice(0, 10) ?? '')}">
           </label>
         </div>
         <label>Next action
           <input data-field="nextAction" value="${esc(application.nextAction ?? '')}" placeholder="Prepare interview">
         </label>
-        <label>Job URL
-          <input data-field="jobUrl" value="${esc(application.jobUrl ?? '')}" placeholder="https://…">
-        </label>
-        <label>Fit reason
-          <input data-field="fitReason" value="${esc(application.fitReason ?? '')}" placeholder="Why this role fits">
-        </label>
-        <label>Notes
-          <textarea data-field="notes" rows="2" placeholder="Private notes">${esc(application.notes ?? '')}</textarea>
-        </label>
+
+        <details class="application-more">
+          <summary>More details</summary>
+          <div class="application-more__body">
+            <div class="planner-form-grid">
+              <label>Fit 1–5
+                <input data-field="fitScore" type="number" min="1" max="5" value="${application.fitScore ?? ''}">
+              </label>
+              <label>Next event
+                <input data-field="nextEventAt" type="date" value="${esc(application.nextEventAt?.slice(0, 10) ?? '')}">
+              </label>
+            </div>
+            <label>Job URL
+              <input data-field="jobUrl" value="${esc(application.jobUrl ?? '')}" placeholder="https://…">
+            </label>
+            <label>Fit reason
+              <input data-field="fitReason" value="${esc(application.fitReason ?? '')}" placeholder="Why this role fits">
+            </label>
+            <label>Notes
+              <textarea data-field="notes" rows="2" placeholder="Private notes">${esc(application.notes ?? '')}</textarea>
+            </label>
+          </div>
+        </details>
+
         <div class="application-card__footer">
           <span>${application.appliedAt ? `Applied ${esc(application.appliedAt.slice(0, 10))}` : application.savedAt ? `Saved ${esc(application.savedAt.slice(0, 10))}` : 'Not dated'}</span>
-          <button type="button" class="btn btn--primary btn--tiny" data-action="application-save" data-id="${esc(application.id)}">Save changes</button>
+          <button type="button" class="btn btn--primary btn--tiny" data-action="application-save" data-id="${esc(application.id)}">Save</button>
         </div>
       </div>
     </details>`;

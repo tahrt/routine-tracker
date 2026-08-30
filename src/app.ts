@@ -170,6 +170,12 @@ export const startApp = (): (() => void) => {
         : '<p class="empty">Learning path not found.</p>';
     } else if (state.workstreamOpenId) {
       const workstream = store.getWorkstreams()[state.workstreamOpenId];
+      const detailWeekSummary = weekPlanningSummary({
+        dateK: t,
+        capacityProfiles: store.getCapacityProfiles(),
+        weekPlans: store.getWeekPlans(),
+        plannedActions: store.getPlannedActions(),
+      });
       body = workstream
         ? renderWorkstreamDetail({
             workstream,
@@ -178,6 +184,9 @@ export const startApp = (): (() => void) => {
             plannedActions: store.getPlannedActions(),
             jobApplications: store.getJobApplications(),
             habits,
+            weekProgress: detailWeekSummary.commitments.find(
+              (commitment) => commitment.workstreamId === workstream.id,
+            ),
             domainHtml:
               workstream.type === 'learning'
                 ? renderLearningWorkstreamPanel(LEARNING_PATHS, store.getLearningProgress())

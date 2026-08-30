@@ -27,6 +27,15 @@ V2.2 final verification + deployment:
 - deployed service-worker build: `2bc207483200-20260830134908`
 - schema remains v5; existing imported planning data is unchanged
 
+V2.2.1 usability follow-up from iPhone feedback:
+
+- Workstream cards now show **THIS WEEK %** based on completed Focus Blocks / weekly target, not a fake overall project-completion estimate
+- Workstream detail repeats the same weekly execution progress with done / scheduled / target blocks
+- Application rows keep Stage + Next action + Due in the quick editor; Fit / event / URL / reason / notes move under **More details**
+- bottom navigation chrome hardened for iPhone with explicit z-index, centered fixed width, safe-area padding, and GPU compositing
+- app bottom padding increased so long content is not hidden behind the fixed nav
+- no schema/data changes
+
 
 Current status as of 2026-08-30:
 
