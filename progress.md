@@ -45,14 +45,20 @@ Safety invariants preserved:
 - no new backend / sync dependency
 - existing imported Planning V1 data remains valid
 
-Verification before final release:
+Final V2.1 release verification:
 
-- `npm test` — **10/10 files, 150/150 tests passed** after the V2.1 semantics/UI changes
-- `npm run build` — passed before the final documentation pass
+- `npm test` — **10/10 files, 150/150 tests passed**
+- `npm run build` — TypeScript + Vite + service-worker build passed
+- source commit: `131689c`
+- pushed to `origin/main`
+- `npm run deploy` completed successfully
+- deployed service-worker build: `131689cf2572-20260830130116`
+- `dist/` published to the `gh-pages` branch
+- schema remains v5; no reset/re-import is required
 
-Next release step:
+Remaining verification:
 
-> Run final tests + production build, commit, push `main`, deploy `gh-pages`, then verify the update on the existing iPhone Home Screen install.
+> Open the existing Routine Home Screen app on iPhone, accept **Update now** when offered, and smoke-test Today Agenda / Week Execution Calendar / Workstream Detail. Do **not** delete or re-add the Home Screen app.
 
 ## Current released state
 

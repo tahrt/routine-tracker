@@ -181,15 +181,17 @@ V2.1 is done when:
 
 ## Status
 
-Implementation is complete locally as of 2026-08-30.
+V2.1 is implemented, tested, pushed, and deployed as of 2026-08-30.
 
-Release gate:
+Release result:
 
-- run final tests
-- run final production build
-- commit
-- push main
-- deploy gh-pages
-- verify update on the existing iPhone Home Screen install
+- final test suite: 10/10 files, 150/150 tests passed
+- production TypeScript + Vite + service-worker build passed
+- source commit: `131689c`
+- deployed service-worker build: `131689cf2572-20260830130116`
+- `dist/` published successfully to `gh-pages`
+- schema remains v5; existing Planning V1 imports remain valid
+
+Remaining verification is only the real installed-PWA smoke check on the existing iPhone Home Screen app.
 
 Do not delete or re-add the Home Screen app.
