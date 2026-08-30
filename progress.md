@@ -34,6 +34,12 @@ V2.1 implemented locally:
   - filtered weekly calendar and upcoming schedule
   - Career Workstreams link to Application Tracker
   - if current week is empty, calendar anchors to the nearest upcoming scheduled week
+- **Planning Manager mobile usability polish**
+  - Workstreams are compact summary cards instead of full edit forms
+  - tapping a Workstream opens its calendar/detail page
+  - editing lives in a collapsed editor on the detail page
+  - weekly allocation, Add Workstream, Add Action, action controls, and Weekly Review are collapsed until needed
+  - top overview shows scheduled blocks / active workstreams / planned actions
 
 Safety invariants preserved:
 
@@ -45,15 +51,10 @@ Safety invariants preserved:
 - no new backend / sync dependency
 - existing imported Planning V1 data remains valid
 
-Final V2.1 release verification:
+Latest verification after Planning Manager usability polish:
 
 - `npm test` — **10/10 files, 150/150 tests passed**
 - `npm run build` — TypeScript + Vite + service-worker build passed
-- source commit: `131689c`
-- pushed to `origin/main`
-- `npm run deploy` completed successfully
-- deployed service-worker build: `131689cf2572-20260830130116`
-- `dist/` published to the `gh-pages` branch
 - schema remains v5; no reset/re-import is required
 
 Remaining verification:

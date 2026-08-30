@@ -241,25 +241,35 @@ const workstreamOptions = (
     )
     .join('');
 
-const actionCard = (action: PlannedAction, workstreams: Readonly<Record<string, Workstream>>, todayKey: string): string => {
+const actionCard = (
+  action: PlannedAction,
+  workstreams: Readonly<Record<string, Workstream>>,
+  todayKey: string,
+): string => {
   const workstream = workstreams[action.workstreamId];
-  return `<article class="planner-manage-action">
-    <div>
-      <strong>${esc(action.title)}</strong>
-      <span>${esc(action.date)} · ${esc(workstreamLabel(workstream))} · ${action.focusBlocks} block${action.focusBlocks === 1 ? '' : 's'}</span>
+  return `<details class="planner-action-row planner-disclosure">
+    <summary>
+      <span class="planner-action-row__date">${esc(shortDate(action.date))}<small>${esc(shortDay(action.date))}</small></span>
+      <span class="planner-action-row__copy">
+        <strong>${esc(action.title)}</strong>
+        <small>${esc(workstreamLabel(workstream))} · ${action.focusBlocks} block${action.focusBlocks === 1 ? '' : 's'}</small>
+      </span>
+      <span class="${cx('planner-status-pill', action.status === 'done' && 'is-done')}">${esc(action.status)}</span>
+    </summary>
+    <div class="planner-action-row__controls">
+      <div class="planner-action__buttons">
+        <button type="button" class="btn btn--tiny" data-action="planning-action-status" data-id="${esc(action.id)}" data-status="done">Done</button>
+        <button type="button" class="btn btn--tiny" data-action="planning-action-status" data-id="${esc(action.id)}" data-status="deferred">Defer</button>
+        <button type="button" class="btn btn--tiny" data-action="planning-action-status" data-id="${esc(action.id)}" data-status="cancelled">Cancel</button>
+      </div>
+      ${action.status !== 'done'
+        ? `<div class="planner-replan">
+            <input type="date" data-field="replanDate" value="${esc(action.date < todayKey ? todayKey : action.date)}">
+            <button type="button" class="btn btn--tiny" data-action="planning-replan-action" data-id="${esc(action.id)}">Move</button>
+          </div>`
+        : ''}
     </div>
-    <div class="planner-action__buttons">
-      <button type="button" class="btn btn--tiny" data-action="planning-action-status" data-id="${esc(action.id)}" data-status="done">Done</button>
-      <button type="button" class="btn btn--tiny" data-action="planning-action-status" data-id="${esc(action.id)}" data-status="deferred">Defer</button>
-      <button type="button" class="btn btn--tiny" data-action="planning-action-status" data-id="${esc(action.id)}" data-status="cancelled">Cancel</button>
-    </div>
-    ${action.status !== 'done'
-      ? `<div class="planner-replan">
-          <input type="date" data-field="replanDate" value="${esc(action.date < todayKey ? todayKey : action.date)}">
-          <button type="button" class="btn btn--tiny" data-action="planning-replan-action" data-id="${esc(action.id)}">Move explicitly</button>
-        </div>`
-      : ''}
-  </article>`;
+  </details>`;
 };
 
 export const renderPlanningManager = ({
@@ -284,42 +294,40 @@ export const renderPlanningManager = ({
     .filter((action) => weekDates.has(action.date) && action.status !== 'cancelled')
     .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
 
-  const workstreamCards = all.length
-    ? all
-        .map(
-          (workstream) => `
-            <article class="planner-workstream" data-workstream-id="${esc(workstream.id)}">
-              <div class="planner-workstream__head">
-                <button type="button" class="planner-workstream__title" data-action="open-workstream" data-id="${esc(workstream.id)}">
-                  <span>${priorityLabel(workstream.outcome.priority)} · ${esc(workstream.type)}</span>
-                  <h3>${esc(workstream.title)}</h3>
-                </button>
-                <select data-field="status" aria-label="Status for ${esc(workstream.title)}">
-                  ${(['active', 'queued', 'maintenance', 'parked', 'done'] as const)
-                    .map(
-                      (status) =>
-                        `<option value="${status}" ${status === workstream.execution.status ? 'selected' : ''}>${status}</option>`,
-                    )
-                    .join('')}
-                </select>
-              </div>
-              <label>Goal<input data-field="goal" value="${esc(workstream.outcome.goal)}"></label>
-              <div class="planner-form-grid">
-                <label>Deadline<input data-field="deadline" type="date" value="${esc(workstream.plan.deadline ?? '')}"></label>
-                <label>Habit<select data-field="habit">${habitOptions(habits, workstream.linkedHabitId)}</select></label>
-              </div>
-              <label>Milestone<input data-field="milestone" value="${esc(workstream.execution.milestone ?? '')}"></label>
-              <label>Next action<input data-field="nextAction" value="${esc(workstream.execution.nextAction ?? '')}"></label>
-              <label>Definition of done<textarea data-field="definitionOfDone" rows="2">${esc(workstream.plan.definitionOfDone.join('\n'))}</textarea></label>
-              <button type="button" class="btn btn--tiny" data-action="planning-save-workstream" data-id="${esc(workstream.id)}">Save workstream</button>
-            </article>`,
-        )
-        .join('')
-    : '<p class="empty">No workstreams yet. Start with only what is active now.</p>';
-
   const commitmentByWorkstream = new Map(
     (weekPlan?.commitments ?? []).map((commitment) => [commitment.workstreamId, commitment] as const),
   );
+  const progressByWorkstream = new Map(
+    weekSummary.commitments.map((commitment) => [commitment.workstreamId, commitment] as const),
+  );
+
+  const workstreamCards = all.length
+    ? all
+        .map((workstream) => {
+          const commitment = progressByWorkstream.get(workstream.id);
+          const deadline = workstream.plan.deadline ? shortDate(workstream.plan.deadline) : 'No deadline';
+          const next = workstream.execution.nextAction || workstream.execution.milestone || workstream.outcome.goal || 'No next action yet';
+          const blocks = commitment
+            ? `${commitment.scheduledBlocks}/${commitment.targetBlocks} blocks`
+            : 'No weekly target';
+          return `<button type="button" class="planner-workstream-card"
+                          data-action="open-workstream" data-id="${esc(workstream.id)}">
+            <span class="planner-workstream-card__top">
+              <span class="planner-workstream-card__kicker">${priorityLabel(workstream.outcome.priority)} · ${esc(workstream.type)}</span>
+              <span class="${cx('planner-status-pill', workstream.execution.status === 'active' && 'is-active')}">${esc(workstream.execution.status)}</span>
+            </span>
+            <strong>${esc(workstream.title)}</strong>
+            <span class="planner-workstream-card__next">${esc(next)}</span>
+            <span class="planner-workstream-card__meta">
+              <span>${esc(deadline)}</span>
+              <span>${esc(blocks)}</span>
+              <span aria-hidden="true">›</span>
+            </span>
+          </button>`;
+        })
+        .join('')
+    : '<p class="empty">No workstreams yet. Add only what you are actively managing.</p>';
+
   const commitments = active.length
     ? active
         .map((workstream) => {
@@ -333,84 +341,126 @@ export const renderPlanningManager = ({
         .join('')
     : '<p class="empty">Activate a workstream before allocating blocks.</p>';
 
+  const commitmentSummary = weekSummary.commitments.length
+    ? weekSummary.commitments
+        .map((commitment) => {
+          const workstream = workstreams[commitment.workstreamId];
+          return `<button type="button" class="planner-allocation-row"
+                          data-action="open-workstream" data-id="${esc(commitment.workstreamId)}">
+            <span><strong>${esc(workstreamLabel(workstream))}</strong><small>${esc(commitment.outcome)}</small></span>
+            <span><strong>${commitment.scheduledBlocks}/${commitment.targetBlocks}</strong><small>blocks</small></span>
+          </button>`;
+        })
+        .join('')
+    : '<p class="empty">No weekly allocation yet.</p>';
+
   return `
-    <section class="planner-manager">
-      <header class="planner-manager__head">
+    <section class="planner-manager planner-manager--simple">
+      <header class="planner-manager__head planner-manager__head--compact">
         <button type="button" class="back" data-action="close-planner">← Back</button>
         <p class="day__date">PLANNING</p>
-        <h1>Make the week finite.</h1>
-        <p>${esc(formatLong(parseKey(todayKey)))} · Planning changes future execution, not historical routine data.</p>
+        <h1>Plan this week</h1>
+        <p>${esc(formatLong(parseKey(todayKey)))}</p>
       </header>
 
-      <section class="planner-manager__section">
-        <div class="planner-section-head"><div><span>WORKSTREAMS</span><strong>Tap one to open its schedule</strong></div></div>
-        ${workstreamCards}
-
-        <div class="planner-create">
-          <h3>Add workstream</h3>
-          <div class="planner-form-grid">
-            <label>Title<input id="planner-new-title" placeholder="Job Search"></label>
-            <label>Type<select id="planner-new-type">
-              <option value="career">Career</option>
-              <option value="project">Project</option>
-              <option value="learning">Learning</option>
-            </select></label>
-            <label>Priority<select id="planner-new-priority">
-              <option value="north-star">North Star</option>
-              <option value="primary">Primary</option>
-              <option value="support">Support</option>
-              <option value="next">Next</option>
-            </select></label>
-            <label>Linked habit<select id="planner-new-habit">${habitOptions(habits)}</select></label>
-          </div>
-          <button type="button" class="btn btn--primary btn--tiny" data-action="planning-add-workstream">Add workstream</button>
-        </div>
+      <section class="planner-overview">
+        <div><strong>${weekSummary.plannedBlocks}/${weekSummary.capacityBlocks}</strong><span>blocks scheduled</span></div>
+        <div><strong>${active.length}</strong><span>active workstreams</span></div>
+        <div><strong>${weekActions.length}</strong><span>planned actions</span></div>
       </section>
 
-      <section class="planner-manager__section">
+      <section class="planner-manager__section planner-manager__section--flat">
         <div class="planner-section-head">
-          <div><span>JOB SEARCH</span><strong>Application pipeline</strong></div>
-          <button type="button" class="btn btn--tiny" data-action="open-applications">Open tracker</button>
+          <div><span>WORKSTREAMS</span><strong>Tap a card to see its schedule</strong></div>
         </div>
-        <p class="planner-manager__note">Applications keep their own stage and next action. A due application is an alert until you explicitly schedule a Focus Block.</p>
+        <div class="planner-workstream-list">${workstreamCards}</div>
+
+        <details class="planner-disclosure planner-disclosure--create">
+          <summary>＋ Add workstream</summary>
+          <div class="planner-disclosure__body planner-create">
+            <div class="planner-form-grid">
+              <label>Title<input id="planner-new-title" placeholder="Job Search"></label>
+              <label>Type<select id="planner-new-type">
+                <option value="career">Career</option>
+                <option value="project">Project</option>
+                <option value="learning">Learning</option>
+              </select></label>
+              <label>Priority<select id="planner-new-priority">
+                <option value="north-star">North Star</option>
+                <option value="primary">Primary</option>
+                <option value="support">Support</option>
+                <option value="next">Next</option>
+              </select></label>
+              <label>Linked habit<select id="planner-new-habit">${habitOptions(habits)}</select></label>
+            </div>
+            <button type="button" class="btn btn--primary btn--tiny" data-action="planning-add-workstream">Add workstream</button>
+          </div>
+        </details>
       </section>
 
-      <section class="planner-manager__section">
-        <div class="planner-section-head"><div><span>THIS WEEK</span><strong>Allocate Focus Blocks</strong></div></div>
-        ${commitments}
-        <button type="button" class="btn btn--primary btn--tiny" data-action="planning-save-week">Save Week Plan</button>
-      </section>
+      <button type="button" class="planner-quicklink" data-action="open-applications">
+        <span><small>JOB SEARCH</small><strong>Application Tracker</strong></span>
+        <span>Open pipeline ›</span>
+      </button>
 
-      <section class="planner-manager__section">
-        <div class="planner-section-head"><div><span>WEEKLY REVIEW</span><strong>${weekSummary.completedBlocks} done · ${weekSummary.plannedBlocks} scheduled · ${weekSummary.capacityBlocks} capacity</strong></div></div>
-        <label>Wins<textarea id="planner-review-wins" rows="2">${esc(weekPlan?.review?.wins ?? '')}</textarea></label>
-        <label>Misses<textarea id="planner-review-misses" rows="2">${esc(weekPlan?.review?.misses ?? '')}</textarea></label>
-        <label>Bottleneck<input id="planner-review-bottleneck" value="${esc(weekPlan?.review?.bottleneck ?? '')}" placeholder="What repeatedly got in the way?"></label>
-        <label>Adjustment for next week<input id="planner-review-adjustment" value="${esc(weekPlan?.review?.adjustment ?? '')}" placeholder="One change only"></label>
-        <div class="planner-review__actions">
-          <button type="button" class="btn btn--primary btn--tiny" data-action="planning-save-review">Save review</button>
-          <button type="button" class="btn btn--tiny" data-action="planning-create-next-week">Create next week</button>
+      <section class="planner-manager__section planner-manager__section--flat">
+        <div class="planner-section-head">
+          <div><span>THIS WEEK</span><strong>${weekSummary.completedBlocks} done · ${weekSummary.plannedBlocks} scheduled · ${weekSummary.capacityBlocks} capacity</strong></div>
         </div>
+        <div class="planner-allocation-list">${commitmentSummary}</div>
+
+        <details class="planner-disclosure">
+          <summary>Adjust weekly allocation</summary>
+          <div class="planner-disclosure__body">
+            ${commitments}
+            <button type="button" class="btn btn--primary btn--tiny" data-action="planning-save-week">Save Week Plan</button>
+          </div>
+        </details>
       </section>
 
-      <section class="planner-manager__section">
-        <div class="planner-section-head"><div><span>PLANNED ACTIONS</span><strong>Explicit dates, no auto-carry</strong></div></div>
-        ${weekActions.length ? weekActions.map((action) => actionCard(action, workstreams, todayKey)).join('') : '<p class="empty">No actions planned this week.</p>'}
-
-        <div class="planner-create">
-          <h3>Add action</h3>
-          ${active.length
-            ? `<div class="planner-form-grid">
-                <label>Workstream<select id="planner-action-workstream">${workstreamOptions(active)}</select></label>
-                <label>Date<input id="planner-action-date" type="date" value="${esc(todayKey)}"></label>
-                <label>Blocks<input id="planner-action-blocks" type="number" min="1" max="3" value="1"></label>
-                <label>Due<input id="planner-action-due" type="date"></label>
-              </div>
-              <label>Action<input id="planner-action-title" placeholder="Prepare and submit application"></label>
-              <button type="button" class="btn btn--primary btn--tiny" data-action="planning-add-action">Add action</button>`
-            : '<p class="empty">Activate a workstream first.</p>'}
+      <section class="planner-manager__section planner-manager__section--flat">
+        <div class="planner-section-head">
+          <div><span>PLANNED ACTIONS</span><strong>${weekActions.length} this week</strong></div>
         </div>
+        <div class="planner-action-list">
+          ${weekActions.length
+            ? weekActions.map((action) => actionCard(action, workstreams, todayKey)).join('')
+            : '<p class="empty">No actions planned this week.</p>'}
+        </div>
+
+        <details class="planner-disclosure planner-disclosure--create">
+          <summary>＋ Add action</summary>
+          <div class="planner-disclosure__body planner-create">
+            ${active.length
+              ? `<div class="planner-form-grid">
+                  <label>Workstream<select id="planner-action-workstream">${workstreamOptions(active)}</select></label>
+                  <label>Date<input id="planner-action-date" type="date" value="${esc(todayKey)}"></label>
+                  <label>Blocks<input id="planner-action-blocks" type="number" min="1" max="3" value="1"></label>
+                  <label>Due<input id="planner-action-due" type="date"></label>
+                </div>
+                <label>Action<input id="planner-action-title" placeholder="Prepare and submit application"></label>
+                <button type="button" class="btn btn--primary btn--tiny" data-action="planning-add-action">Add action</button>`
+              : '<p class="empty">Activate a workstream first.</p>'}
+          </div>
+        </details>
       </section>
+
+      <details class="planner-disclosure planner-review-card">
+        <summary>
+          <span><small>WEEKLY REVIEW</small><strong>${weekPlan?.review ? 'Review saved' : 'Do this at the end of the week'}</strong></span>
+          <span>›</span>
+        </summary>
+        <div class="planner-disclosure__body">
+          <label>Wins<textarea id="planner-review-wins" rows="2">${esc(weekPlan?.review?.wins ?? '')}</textarea></label>
+          <label>Misses<textarea id="planner-review-misses" rows="2">${esc(weekPlan?.review?.misses ?? '')}</textarea></label>
+          <label>Bottleneck<input id="planner-review-bottleneck" value="${esc(weekPlan?.review?.bottleneck ?? '')}" placeholder="What repeatedly got in the way?"></label>
+          <label>Adjustment for next week<input id="planner-review-adjustment" value="${esc(weekPlan?.review?.adjustment ?? '')}" placeholder="One change only"></label>
+          <div class="planner-review__actions">
+            <button type="button" class="btn btn--primary btn--tiny" data-action="planning-save-review">Save review</button>
+            <button type="button" class="btn btn--tiny" data-action="planning-create-next-week">Create next week</button>
+          </div>
+        </div>
+      </details>
     </section>`;
 };
 
@@ -420,12 +470,14 @@ export const renderWorkstreamDetail = ({
   capacityProfiles,
   plannedActions,
   jobApplications,
+  habits,
 }: {
   workstream: Workstream;
   todayKey: string;
   capacityProfiles: readonly CapacityProfile[];
   plannedActions: Readonly<Record<string, PlannedAction>>;
   jobApplications: Readonly<Record<string, JobApplication>>;
+  habits: readonly Habit[];
 }): string => {
   const allActions = activeScheduledActions(plannedActions, workstream.id);
   const upcoming = allActions.filter((action) => action.date >= todayKey);
@@ -512,6 +564,31 @@ export const renderWorkstreamDetail = ({
           ? `<ul class="workstream-dod">${workstream.plan.definitionOfDone.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>`
           : '<p class="empty">No finish line written yet.</p>'}
       </section>
+
+      <details class="planner-disclosure workstream-edit" data-workstream-id="${esc(workstream.id)}">
+        <summary>
+          <span><small>EDIT</small><strong>Workstream details</strong></span>
+          <span>›</span>
+        </summary>
+        <div class="planner-disclosure__body">
+          <div class="planner-form-grid">
+            <label>Status
+              <select data-field="status">
+                ${(['active', 'queued', 'maintenance', 'parked', 'done'] as const)
+                  .map((status) => `<option value="${status}" ${status === workstream.execution.status ? 'selected' : ''}>${status}</option>`)
+                  .join('')}
+              </select>
+            </label>
+            <label>Deadline<input data-field="deadline" type="date" value="${esc(workstream.plan.deadline ?? '')}"></label>
+            <label>Habit<select data-field="habit">${habitOptions(habits, workstream.linkedHabitId)}</select></label>
+          </div>
+          <label>Goal<input data-field="goal" value="${esc(workstream.outcome.goal)}"></label>
+          <label>Milestone<input data-field="milestone" value="${esc(workstream.execution.milestone ?? '')}"></label>
+          <label>Next action<input data-field="nextAction" value="${esc(workstream.execution.nextAction ?? '')}"></label>
+          <label>Definition of done<textarea data-field="definitionOfDone" rows="3">${esc(workstream.plan.definitionOfDone.join('\n'))}</textarea></label>
+          <button type="button" class="btn btn--primary btn--tiny" data-action="planning-save-workstream" data-id="${esc(workstream.id)}">Save changes</button>
+        </div>
+      </details>
 
       ${workstream.type === 'career'
         ? `<section class="planner-manager__section">

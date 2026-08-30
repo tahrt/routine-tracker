@@ -169,6 +169,7 @@ export const startApp = (): (() => void) => {
             capacityProfiles: store.getCapacityProfiles(),
             plannedActions: store.getPlannedActions(),
             jobApplications: store.getJobApplications(),
+            habits,
           })
         : '<p class="empty">Workstream not found.</p>';
     } else if (state.applicationsOpen) {
@@ -696,7 +697,7 @@ export const startApp = (): (() => void) => {
       const id = el.dataset.id;
       if (!id) return;
       const action = store.getPlannedActions()[id];
-      const card = el.closest<HTMLElement>('.planner-manage-action');
+      const card = el.closest<HTMLElement>('.planner-action-row');
       const nextDate = (card?.querySelector('[data-field="replanDate"]') as HTMLInputElement | null)?.value ?? '';
       if (!action || !nextDate) return void toast('Choose a new date first.', 'error');
       if (nextDate === action.date && action.status === 'planned') return void toast('Choose a different date to replan.', 'error');

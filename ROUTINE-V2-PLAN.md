@@ -192,6 +192,21 @@ Release result:
 - `dist/` published successfully to `gh-pages`
 - schema remains v5; existing Planning V1 imports remain valid
 
-Remaining verification is only the real installed-PWA smoke check on the existing iPhone Home Screen app.
+Planning manager usability polish added after the first iPhone screenshot review:
+
+- replaced always-open Workstream forms with compact tappable summary cards
+- moved Workstream editing into a collapsed editor on the Workstream detail screen
+- added a compact weekly overview (scheduled blocks / active workstreams / planned actions)
+- collapsed Add Workstream, weekly allocation editing, Add Action, action controls, and Weekly Review until needed
+- kept Application Tracker as a single quick link instead of another large form block
+- preserved all V2.1 data/storage semantics
+
+Latest verification:
+
+- 10/10 test files, 150/150 tests passed
+- production TypeScript + Vite + PWA build passed
+- schema remains v5
+
+Remaining verification is the real installed-PWA smoke check on the existing iPhone Home Screen app.
 
 Do not delete or re-add the Home Screen app.

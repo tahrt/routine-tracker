@@ -210,7 +210,7 @@ describe('app', () => {
     boot();
     expect(app().textContent).toContain('2 Focus Blocks');
     click(app().querySelector('[data-action="open-planner"]'));
-    expect(app().textContent).toContain('Make the week finite.');
+    expect(app().textContent).toContain('Plan this week');
 
     (document.getElementById('planner-new-title') as HTMLInputElement).value = 'Job Search';
     (document.getElementById('planner-new-type') as HTMLSelectElement).value = 'career';
@@ -326,7 +326,7 @@ describe('app', () => {
     (document.getElementById('planner-action-date') as HTMLInputElement).value = '2026-08-24';
     click(app().querySelector('[data-action="planning-add-action"]'));
 
-    const actionCard = app().querySelector<HTMLElement>('.planner-manage-action');
+    const actionCard = app().querySelector<HTMLElement>('.planner-action-row');
     expect(actionCard).not.toBeNull();
     (actionCard?.querySelector('[data-field="replanDate"]') as HTMLInputElement).value = '2026-08-25';
     click(actionCard?.querySelector('[data-action="planning-replan-action"]') ?? null);
