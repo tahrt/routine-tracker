@@ -1684,3 +1684,190 @@ a {
     margin-bottom: 2px;
   }
 }
+
+
+/* ------------------------------------------------------ Application Tracker */
+
+.application-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 14px;
+}
+
+.application-metrics > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 11px 8px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 13px;
+  background: rgba(255,255,255,.025);
+  text-align: center;
+}
+
+.application-metrics strong {
+  color: #f4f7fb;
+  font-size: 18px;
+}
+
+.application-metrics span {
+  color: #879bb2;
+  font-size: 8.5px;
+  line-height: 1.25;
+}
+
+.application-attention {
+  margin: 12px 0;
+  padding: 14px;
+  border: 1px solid rgba(255,181,46,.28);
+  border-radius: 16px;
+  background: rgba(255,181,46,.045);
+}
+
+.application-attention__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px solid rgba(255,255,255,.055);
+}
+
+.application-attention__row:first-of-type {
+  border-top: 0;
+}
+
+.application-attention__row > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.application-attention__row strong {
+  color: #eef3f8;
+  font-size: 12px;
+}
+
+.application-attention__row span {
+  color: #9aacc0;
+  font-size: 10px;
+}
+
+.application-card {
+  padding: 13px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 14px;
+  background: rgba(255,255,255,.02);
+}
+
+.application-card + .application-card {
+  margin-top: 9px;
+}
+
+.application-card--attention {
+  border-color: rgba(255,181,46,.34);
+  background:
+    radial-gradient(circle at 94% 8%, rgba(255,181,46,.08), transparent 30%),
+    rgba(255,181,46,.025);
+}
+
+.application-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.application-card__head > div {
+  min-width: 0;
+}
+
+.application-card__head span {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: .1em;
+  color: #d9a958;
+}
+
+.application-card__head h3 {
+  margin: 4px 0 0;
+  color: #f3f7fb;
+  font-size: 14px;
+}
+
+.application-card__head p {
+  margin: 3px 0 0;
+  color: #93a6bb;
+  font-size: 11px;
+}
+
+.application-card label,
+.applications .planner-manager__section > label {
+  display: grid;
+  gap: 5px;
+  margin-top: 8px;
+  color: #8fa4bc;
+  font-size: 10px;
+}
+
+.application-card input,
+.application-card select,
+.application-card textarea,
+.applications .planner-manager__section > label input,
+.applications .planner-manager__section .planner-form-grid input,
+.applications .planner-manager__section .planner-form-grid select {
+  width: 100%;
+  min-height: 40px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: rgba(4,12,22,.55);
+  color: #edf3f8;
+  font: inherit;
+}
+
+.application-card textarea {
+  resize: vertical;
+}
+
+.application-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 11px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(255,255,255,.055);
+}
+
+.application-card__footer span {
+  color: #778da5;
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.planner-manager__note {
+  margin: 0;
+  color: #8fa4bc;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+@media (max-width: 520px) {
+  .application-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .application-metrics > div:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .application-card__head,
+  .application-card__footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

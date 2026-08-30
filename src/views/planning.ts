@@ -39,7 +39,9 @@ export const renderTodayPlanning = ({
                <button type="button" class="btn btn--tiny" data-action="planning-action-status"
                        data-id="${esc(item.id)}" data-status="cancelled">Cancel</button>
              </div>`
-          : `<button type="button" class="btn btn--tiny" data-action="open-planner">Plan this</button>`;
+          : item.source === 'application'
+            ? `<button type="button" class="btn btn--tiny" data-action="open-applications">Applications</button>`
+            : `<button type="button" class="btn btn--tiny" data-action="open-planner">Plan this</button>`;
 
       return `<article class="${cx('planner-action', index === 0 && 'planner-action--must')}">
         <div class="planner-action__eyebrow">${index === 0 ? 'MUST WIN' : 'NEXT'} · ${esc(item.reason)}</div>
@@ -257,6 +259,14 @@ export const renderPlanningManager = ({
           </div>
           <button type="button" class="btn btn--primary btn--tiny" data-action="planning-add-workstream">Add workstream</button>
         </div>
+      </section>
+
+      <section class="planner-manager__section">
+        <div class="planner-section-head">
+          <div><span>JOB SEARCH</span><strong>Application pipeline</strong></div>
+          <button type="button" class="btn btn--tiny" data-action="open-applications">Open tracker</button>
+        </div>
+        <p class="planner-manager__note">Applications keep their own stage and next action. Due application work can outrank generic Job Search work in Today.</p>
       </section>
 
       <section class="planner-manager__section">

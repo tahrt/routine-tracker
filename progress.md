@@ -34,11 +34,21 @@ Current status as of 2026-08-30:
 - Verification after Phase 2 on 2026-08-30:
   - `npm test` — **10/10 files, 147/147 tests passed**
   - `npm run build` — TypeScript + Vite + service-worker build passed
+- Phase 3 Application Tracker is complete locally:
+  - dedicated local Application Tracker UI
+  - add/update stage, fit, URL, next action, due date, next event, fit reason, and private notes
+  - pipeline metrics + Needs Attention
+  - due/overdue application next actions feed Today automatically when a career workstream is active
+  - live screening/interview/final work outranks generic Job Search work
+  - Withdrawn is the non-destructive V1 removal path; no hard-delete of application history
+- Verification after Phase 3 on 2026-08-30:
+  - `npm test` — **10/10 files, 148/148 tests passed**
+  - `npm run build` — passed
 - Nothing has been pushed or deployed for Planning V1 yet.
 
 Next measurable step:
 
-> Phase 3 — build the Application Tracker UI on top of the already-persisted JobApplication model and feed due application actions into Today.
+> Phase 4 — implement explicit missed-action replan + Weekly Review so deadlines never slide silently and next week is adjusted from real capacity.
 
 ## Current released state
 

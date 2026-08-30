@@ -21,6 +21,7 @@ import type {
   WorkstreamType,
 } from './types';
 import { toast } from './ui/dom';
+import { renderApplications } from './views/applications';
 import { renderTodayDashboard } from './views/dashboard';
 import { renderDay } from './views/day';
 import { renderEditTemplate } from './views/editTemplate';
@@ -44,6 +45,7 @@ interface AppState {
   openDay: string | null;
   learningPathId: string | null;
   planningOpen: boolean;
+  applicationsOpen: boolean;
   rawOpen: boolean;
   resetArmed: boolean;
   pendingImport: (PendingImport & { raw: unknown }) | null;
@@ -72,6 +74,7 @@ export const startApp = (): (() => void) => {
     openDay: null,
     learningPathId: null,
     planningOpen: false,
+    applicationsOpen: false,
     rawOpen: false,
     resetArmed: false,
     pendingImport: null,
@@ -145,7 +148,9 @@ export const startApp = (): (() => void) => {
     const habits = store.getHabits();
 
     let body: string;
-    if (state.planningOpen) {
+    if (state.applicationsOpen) {
+      body = renderApplications({ todayKey: t, applications: store.getJobApplications() });
+    } else if (state.planningOpen) {
       const weekPlan = weekPlanForDate(t, store.getWeekPlans());
       body = renderPlanningManager({
         todayKey: t,
@@ -279,6 +284,7 @@ export const startApp = (): (() => void) => {
     state.openDay = null;
     state.learningPathId = null;
     state.planningOpen = false;
+    state.applicationsOpen = false;
     state.editing = null;
     if (tab === 'today') {
       state.todayMode = 'today';
@@ -337,6 +343,7 @@ export const startApp = (): (() => void) => {
 
     'open-planner': () => {
       state.planningOpen = true;
+      state.applicationsOpen = false;
       state.openDay = null;
       state.editing = null;
       render();
@@ -344,6 +351,20 @@ export const startApp = (): (() => void) => {
 
     'close-planner': () => {
       state.planningOpen = false;
+      render();
+    },
+
+    'open-applications': () => {
+      state.applicationsOpen = true;
+      state.planningOpen = false;
+      state.openDay = null;
+      state.editing = null;
+      render();
+    },
+
+    'close-applications': () => {
+      state.applicationsOpen = false;
+      state.planningOpen = true;
       render();
     },
 
@@ -616,6 +637,67 @@ export const startApp = (): (() => void) => {
         }
       }
       toast(status === 'deferred' ? 'Deferred. It will not move dates automatically.' : `Action ${status}.`);
+      render();
+    },
+
+    'application-add': () => {
+      const company = (document.getElementById('application-new-company') as HTMLInputElement | null)?.value.trim() ?? '';
+      const role = (document.getElementById('application-new-role') as HTMLInputElement | null)?.value.trim() ?? '';
+      if (!company || !role) return void toast('Application needs company and role.', 'error');
+      const stage = ((document.getElementById('application-new-stage') as HTMLSelectElement | null)?.value ?? 'saved') as import('./types').ApplicationStage;
+      const fitRaw = Number((document.getElementById('application-new-fit') as HTMLInputElement | null)?.value ?? '');
+      const fitScore = Number.isFinite(fitRaw) && fitRaw >= 1 && fitRaw <= 5 ? fitRaw : undefined;
+      const nextActionDue = (document.getElementById('application-new-due') as HTMLInputElement | null)?.value || undefined;
+      const nextAction = (document.getElementById('application-new-next') as HTMLInputElement | null)?.value.trim() || undefined;
+      const jobUrl = (document.getElementById('application-new-url') as HTMLInputElement | null)?.value.trim() || undefined;
+      const id = `app_${globalThis.crypto?.randomUUID?.().slice(0, 8) ?? Math.random().toString(36).slice(2, 10)}`;
+      const stamp = nowIso();
+      store.upsertJobApplication({
+        id,
+        company,
+        role,
+        stage,
+        ...(fitScore ? { fitScore } : {}),
+        ...(nextAction ? { nextAction } : {}),
+        ...(nextActionDue ? { nextActionDue } : {}),
+        ...(jobUrl ? { jobUrl } : {}),
+        savedAt: stamp,
+        ...(stage === 'applied' ? { appliedAt: stamp } : {}),
+      });
+      toast('Application added.');
+      render();
+    },
+
+    'application-save': (el) => {
+      const id = el.dataset.id;
+      if (!id) return;
+      const current = store.getJobApplications()[id];
+      const card = el.closest<HTMLElement>('[data-application-id]');
+      if (!current || !card) return;
+      const field = (name: string): HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null =>
+        card.querySelector(`[data-field="${name}"]`);
+      const stage = ((field('stage') as HTMLSelectElement | null)?.value ?? current.stage) as import('./types').ApplicationStage;
+      const fitRaw = Number((field('fitScore') as HTMLInputElement | null)?.value ?? '');
+      const fitScore = Number.isFinite(fitRaw) && fitRaw >= 1 && fitRaw <= 5 ? fitRaw : undefined;
+      const nextEventDate = (field('nextEventAt') as HTMLInputElement | null)?.value || undefined;
+      const nextActionDue = (field('nextActionDue') as HTMLInputElement | null)?.value || undefined;
+      const nextAction = (field('nextAction') as HTMLInputElement | null)?.value.trim() || undefined;
+      const fitReason = (field('fitReason') as HTMLInputElement | null)?.value.trim() || undefined;
+      const jobUrl = (field('jobUrl') as HTMLInputElement | null)?.value.trim() || undefined;
+      const notes = (field('notes') as HTMLTextAreaElement | null)?.value.trim() || undefined;
+      store.upsertJobApplication({
+        ...current,
+        stage,
+        ...(fitScore ? { fitScore } : { fitScore: undefined }),
+        ...(nextAction ? { nextAction } : { nextAction: undefined }),
+        ...(nextActionDue ? { nextActionDue } : { nextActionDue: undefined }),
+        ...(nextEventDate ? { nextEventAt: `${nextEventDate}T00:00:00` } : { nextEventAt: undefined }),
+        ...(fitReason ? { fitReason } : { fitReason: undefined }),
+        ...(jobUrl ? { jobUrl } : { jobUrl: undefined }),
+        ...(notes ? { notes } : { notes: undefined }),
+        ...(stage === 'applied' && !current.appliedAt ? { appliedAt: nowIso() } : {}),
+      });
+      toast('Application saved.');
       render();
     },
 

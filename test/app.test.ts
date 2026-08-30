@@ -245,6 +245,42 @@ describe('app', () => {
     expect((Object.values(actions)[0] as { status: string }).status).toBe('done');
   });
 
+  it('tracks an application and surfaces its due next action into Today', () => {
+    boot();
+    click(app().querySelector('[data-action="open-planner"]'));
+
+    (document.getElementById('planner-new-title') as HTMLInputElement).value = 'Job Search';
+    (document.getElementById('planner-new-type') as HTMLSelectElement).value = 'career';
+    (document.getElementById('planner-new-priority') as HTMLSelectElement).value = 'north-star';
+    (document.getElementById('planner-new-habit') as HTMLSelectElement).value = 'jobsearch';
+    click(app().querySelector('[data-action="planning-add-workstream"]'));
+
+    click(app().querySelector('[data-action="open-applications"]'));
+    expect(app().textContent).toContain('Application Tracker');
+
+    (document.getElementById('application-new-company') as HTMLInputElement).value = 'Example Co';
+    (document.getElementById('application-new-role') as HTMLInputElement).value = 'AI Solutions';
+    (document.getElementById('application-new-next') as HTMLInputElement).value = 'Prepare interview';
+    (document.getElementById('application-new-due') as HTMLInputElement).value = '2026-08-24';
+    click(app().querySelector('[data-action="application-add"]'));
+
+    expect(app().textContent).toContain('NEEDS ATTENTION');
+    const card = app().querySelector<HTMLElement>('[data-application-id]');
+    expect(card).not.toBeNull();
+    (card?.querySelector('[data-field="stage"]') as HTMLSelectElement).value = 'interview';
+    click(card?.querySelector('[data-action="application-save"]') ?? null);
+
+    const applications = JSON.parse(window.localStorage.getItem('rt:job:applications') as string);
+    const stored = Object.values(applications)[0] as { stage: string; nextAction: string };
+    expect(stored.stage).toBe('interview');
+    expect(stored.nextAction).toBe('Prepare interview');
+
+    click(app().querySelector('[data-action="close-applications"]'));
+    click(app().querySelector('[data-action="close-planner"]'));
+    expect(app().textContent).toContain('Example Co — Prepare interview');
+    expect(app().textContent).toContain('Live pipeline');
+  });
+
 });
 
 describe('template editing', () => {
