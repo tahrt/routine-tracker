@@ -36,6 +36,15 @@ V2.2.1 usability follow-up from iPhone feedback:
 - app bottom padding increased so long content is not hidden behind the fixed nav
 - no schema/data changes
 
+V2.2.1 release result:
+
+- `npm test` — **10/10 files, 151/151 tests passed**
+- `npm run build` — TypeScript + Vite + service-worker build passed
+- commit: `1ca7008`
+- pushed to `origin/main`
+- deployed service-worker build: `1ca700859d95-20260830142506`
+- published successfully to `gh-pages`
+
 
 Current status as of 2026-08-30:
 
