@@ -73,10 +73,13 @@ describe('renderWeek', () => {
     expect((html.match(/class="bar/g) ?? []).length).toBeGreaterThanOrEqual(7);
   });
 
-  it('marks future days non-clickable and disables Next on the current week', () => {
+  it('keeps future routine days non-clickable while allowing planning into future weeks', () => {
     const html = renderWeek({ anchorKey: TODAY, todayKey: TODAY, records });
     expect(html).not.toContain('data-date="2026-08-30"'); // Sunday is still ahead
-    expect(html).toMatch(/data-delta="1"[^>]*disabled/);
+    expect(html).not.toMatch(/data-delta="1"[^>]*disabled/);
+
+    const horizon = renderWeek({ anchorKey: '2026-09-21', todayKey: TODAY, records: {} });
+    expect(horizon).toMatch(/data-delta="1"[^>]*disabled/);
   });
 
   it('lets past days be opened', () => {
@@ -159,7 +162,7 @@ describe('renderLearning', () => {
 
 
 describe('renderTodayDashboard', () => {
-  it('shows the next core task and the next learning lesson', () => {
+  it('shows a unified agenda and the next learning lesson', () => {
     const html = renderTodayDashboard({
       dateKey: TODAY,
       record: undefined,
@@ -169,7 +172,7 @@ describe('renderTodayDashboard', () => {
       greeting: 'Good morning',
       outOfSync: false,
     });
-    expect(html).toContain('UP NEXT');
+    expect(html).toContain("TODAY'S AGENDA");
     expect(html).toContain('Gym');
     expect(html).toContain('CONTINUE LEARNING');
     expect(html).toContain('How to Get and Evaluate Startup Ideas');

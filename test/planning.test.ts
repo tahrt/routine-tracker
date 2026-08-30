@@ -62,7 +62,7 @@ describe('capacityForDate', () => {
 });
 
 describe('selectTodayPlan', () => {
-  it('never selects more Focus Blocks than the day can hold', () => {
+  it('keeps explicit scheduled work visible and flags an overbooked day', () => {
     const actions: Record<string, PlannedAction> = {
       a: {
         id: 'a',
@@ -91,9 +91,10 @@ describe('selectTodayPlan', () => {
     });
 
     expect(out.capacityBlocks).toBe(1);
-    expect(out.items.map((item) => item.id)).toEqual(['b']);
-    expect(out.usedBlocks).toBe(1);
+    expect(out.items.map((item) => item.id)).toEqual(['a', 'b']);
+    expect(out.usedBlocks).toBe(3);
     expect(out.remainingBlocks).toBe(0);
+    expect(out.warnings.join(' ')).toContain('overbooked by 2');
   });
 
   it('does not auto-carry a missed Planned Action from yesterday', () => {
@@ -145,7 +146,7 @@ describe('selectTodayPlan', () => {
     expect(out.items).toEqual([]);
   });
 
-  it('lets a due live-pipeline application outrank generic work', () => {
+  it('keeps a due live-pipeline application as attention until it is explicitly scheduled', () => {
     const application: JobApplication = {
       id: 'app',
       company: 'Example',
@@ -163,11 +164,14 @@ describe('selectTodayPlan', () => {
       jobApplications: { app: application },
     });
 
-    expect(out.items[0]?.source).toBe('application');
-    expect(out.items[0]?.title).toContain('Prepare interview');
+    expect(out.items).toEqual([]);
+    expect(out.usedBlocks).toBe(0);
+    expect(out.attention[0]?.source).toBe('application');
+    expect(out.attention[0]?.title).toContain('Prepare interview');
+    expect(out.attention[0]?.reason).toBe('Live pipeline');
   });
 
-  it('prefers a hard project deadline over a generic north-star fallback when needed', () => {
+  it('keeps workstream next actions as suggestions and ranks a hard deadline first', () => {
     const urgentProject = {
       ...project,
       plan: { ...project.plan, deadline: '2026-09-01' },
@@ -181,8 +185,10 @@ describe('selectTodayPlan', () => {
       jobApplications: {},
     });
 
-    expect(out.items[0]?.workstreamId).toBe('project');
-    expect(out.items[0]?.reason).toBe('Active milestone');
+    expect(out.items).toEqual([]);
+    expect(out.usedBlocks).toBe(0);
+    expect(out.suggestions[0]?.workstreamId).toBe('project');
+    expect(out.suggestions[0]?.reason).toBe('Active milestone');
   });
 
   it('flags an already-missed project deadline for explicit replan', () => {

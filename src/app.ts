@@ -27,7 +27,13 @@ import { renderDay } from './views/day';
 import { renderEditTemplate } from './views/editTemplate';
 import { renderInsights } from './views/insights';
 import { renderLearningOverview, renderLearningPath } from './views/learning';
-import { renderPlanningManager, renderTodayPlanning, renderWeekPlanning } from './views/planning';
+import {
+  renderPlanningManager,
+  renderTodayPlanning,
+  renderWeekCalendar,
+  renderWeekPlanning,
+  renderWorkstreamDetail,
+} from './views/planning';
 import { renderSettings, type PendingImport } from './views/settings';
 import { renderWeek } from './views/week';
 
@@ -46,6 +52,9 @@ interface AppState {
   learningPathId: string | null;
   planningOpen: boolean;
   applicationsOpen: boolean;
+  applicationsReturnWorkstreamId: string | null;
+  workstreamOpenId: string | null;
+  workstreamReturn: 'today' | 'week' | 'planner';
   rawOpen: boolean;
   resetArmed: boolean;
   pendingImport: (PendingImport & { raw: unknown }) | null;
@@ -75,6 +84,9 @@ export const startApp = (): (() => void) => {
     learningPathId: null,
     planningOpen: false,
     applicationsOpen: false,
+    applicationsReturnWorkstreamId: null,
+    workstreamOpenId: null,
+    workstreamReturn: 'today',
     rawOpen: false,
     resetArmed: false,
     pendingImport: null,
@@ -148,7 +160,18 @@ export const startApp = (): (() => void) => {
     const habits = store.getHabits();
 
     let body: string;
-    if (state.applicationsOpen) {
+    if (state.workstreamOpenId) {
+      const workstream = store.getWorkstreams()[state.workstreamOpenId];
+      body = workstream
+        ? renderWorkstreamDetail({
+            workstream,
+            todayKey: t,
+            capacityProfiles: store.getCapacityProfiles(),
+            plannedActions: store.getPlannedActions(),
+            jobApplications: store.getJobApplications(),
+          })
+        : '<p class="empty">Workstream not found.</p>';
+    } else if (state.applicationsOpen) {
       body = renderApplications({ todayKey: t, applications: store.getJobApplications() });
     } else if (state.planningOpen) {
       const weekPlan = weekPlanForDate(t, store.getWeekPlans());
@@ -197,6 +220,13 @@ export const startApp = (): (() => void) => {
                 }),
                 workstreams: store.getWorkstreams(),
               }),
+              calendarHtml: renderWeekCalendar({
+                anchorKey: state.weekAnchor,
+                todayKey: t,
+                capacityProfiles: store.getCapacityProfiles(),
+                plannedActions: store.getPlannedActions(),
+                workstreams: store.getWorkstreams(),
+              }),
             })
           : renderTodayDashboard({
               dateKey: t,
@@ -215,6 +245,8 @@ export const startApp = (): (() => void) => {
                 }),
                 workstreams: store.getWorkstreams(),
               }),
+              plannedActions: store.getPlannedActions(),
+              workstreams: store.getWorkstreams(),
               outOfSync:
                 store.getDay(t) !== undefined &&
                 !state.syncDismissed.has(t) &&
@@ -246,7 +278,7 @@ export const startApp = (): (() => void) => {
     }
 
     const nudge =
-      state.tab === 'today' && !state.openDay && !state.editing && shouldNudgeBackup()
+      state.tab === 'today' && !state.openDay && !state.editing && !state.planningOpen && !state.applicationsOpen && !state.workstreamOpenId && shouldNudgeBackup()
         ? `<div class="nudge">
              <span>Back up your history — it only lives in this browser.</span>
              <button class="btn btn--tiny" type="button" data-action="goto-backup">Export</button>
@@ -292,6 +324,8 @@ export const startApp = (): (() => void) => {
     state.learningPathId = null;
     state.planningOpen = false;
     state.applicationsOpen = false;
+    state.applicationsReturnWorkstreamId = null;
+    state.workstreamOpenId = null;
     state.editing = null;
     if (tab === 'today') {
       state.todayMode = 'today';
@@ -351,6 +385,7 @@ export const startApp = (): (() => void) => {
     'open-planner': () => {
       state.planningOpen = true;
       state.applicationsOpen = false;
+      state.workstreamOpenId = null;
       state.openDay = null;
       state.editing = null;
       render();
@@ -362,8 +397,10 @@ export const startApp = (): (() => void) => {
     },
 
     'open-applications': () => {
+      state.applicationsReturnWorkstreamId = state.workstreamOpenId;
       state.applicationsOpen = true;
       state.planningOpen = false;
+      state.workstreamOpenId = null;
       state.openDay = null;
       state.editing = null;
       render();
@@ -371,7 +408,35 @@ export const startApp = (): (() => void) => {
 
     'close-applications': () => {
       state.applicationsOpen = false;
-      state.planningOpen = true;
+      if (state.applicationsReturnWorkstreamId) {
+        state.workstreamOpenId = state.applicationsReturnWorkstreamId;
+        state.applicationsReturnWorkstreamId = null;
+      } else {
+        state.planningOpen = true;
+      }
+      render();
+    },
+
+    'open-workstream': (el) => {
+      const id = el.dataset.id;
+      if (!id || !store.getWorkstreams()[id]) return;
+      state.workstreamReturn = state.planningOpen ? 'planner' : state.todayMode;
+      state.workstreamOpenId = id;
+      state.planningOpen = false;
+      state.applicationsOpen = false;
+      state.openDay = null;
+      state.editing = null;
+      render();
+    },
+
+    'close-workstream': () => {
+      state.workstreamOpenId = null;
+      if (state.workstreamReturn === 'planner') {
+        state.planningOpen = true;
+      } else {
+        state.tab = 'today';
+        state.todayMode = state.workstreamReturn;
+      }
       render();
     },
 
@@ -424,8 +489,8 @@ export const startApp = (): (() => void) => {
     'week-nav': (el) => {
       const delta = Number(el.dataset.delta ?? 0);
       const next = dateKey(addDays(parseKey(state.weekAnchor), delta * 7));
-      // Never navigate past the current real week.
-      if (delta > 0 && next > today()) return;
+      const horizon = dateKey(addDays(parseKey(today()), 28));
+      if (delta > 0 && next > horizon) return;
       state.weekAnchor = next;
       render();
     },

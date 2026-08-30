@@ -1926,3 +1926,394 @@ a {
     flex-direction: column;
   }
 }
+
+
+/* ------------------------------------------------------ Planning V2.1 UX */
+
+.today-task--planned {
+  background:
+    linear-gradient(90deg, rgba(255,181,46,.055), transparent 72%);
+}
+
+.today-task--planned .today-task__check {
+  border-color: rgba(255,181,46,.55);
+  color: var(--amber);
+}
+
+.today-task--planned.is-done .today-task__check {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+.today-task__core--focus {
+  color: var(--amber);
+}
+
+.today-agenda__hint,
+.today-agenda__routine-note {
+  margin: 10px 0 0;
+  color: #71849d;
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+
+.today-agenda__routine-note {
+  padding: 0 2px 8px;
+  font-family: var(--font-mono);
+}
+
+.planner-action__copybtn,
+.planner-workstream__title,
+.planner-commitment,
+.planner-attention__row,
+.weekcal-item {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.planner-action__copybtn {
+  min-width: 0;
+  padding: 0;
+}
+
+.planner-action__scheduled {
+  flex: 0 0 auto;
+  align-self: center;
+  color: var(--teal);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: .08em;
+}
+
+.planner-attention,
+.planner-suggestions {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(255,255,255,.055);
+}
+
+.planner-attention__label {
+  margin-bottom: 5px;
+  color: #8fa4bc;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: .08em;
+}
+
+.planner-attention__row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid rgba(255,255,255,.04);
+}
+
+.planner-attention__row:first-of-type {
+  border-top: 0;
+}
+
+.planner-attention__row > span:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.planner-attention__row strong {
+  overflow: hidden;
+  color: #e8eef5;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planner-attention__row small {
+  color: #7f94ac;
+  font-size: 9px;
+}
+
+.planner-attention__row > span:last-child {
+  color: #6f8299;
+  font-size: 18px;
+}
+
+.planner-workstream__title {
+  min-width: 0;
+  padding: 0;
+}
+
+.planner-workstream__title h3 {
+  margin-top: 3px;
+}
+
+.planner-commitment {
+  width: 100%;
+  display: block;
+  padding: 0;
+}
+
+.week-calendar {
+  margin: 12px 0;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(16,29,46,.94), rgba(9,18,30,.97));
+}
+
+.weekcal-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+}
+
+.weekcal-day {
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,.055);
+  border-radius: 13px;
+  background: rgba(255,255,255,.018);
+}
+
+.weekcal-day.is-today {
+  border-color: rgba(255,181,46,.35);
+  background: rgba(255,181,46,.035);
+}
+
+.weekcal-day__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 7px;
+}
+
+.weekcal-day__head > div {
+  display: flex;
+  gap: 7px;
+  align-items: baseline;
+}
+
+.weekcal-day__head strong {
+  color: #f0f4f8;
+  font-size: 11px;
+}
+
+.weekcal-day__head span,
+.weekcal-day__head small {
+  color: #8397af;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+}
+
+.weekcal-day__items {
+  display: grid;
+  gap: 5px;
+}
+
+.weekcal-item {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 1px solid rgba(255,181,46,.13);
+  border-radius: 9px;
+  background: rgba(255,181,46,.025);
+}
+
+.weekcal-item > span {
+  color: #e8edf3;
+  font-size: 10.5px;
+}
+
+.weekcal-item > small,
+.weekcal-day__empty {
+  color: #788da5;
+  font-size: 8.5px;
+}
+
+.weekcal-item.is-done {
+  opacity: .55;
+}
+
+.weekcal-item.is-done > span {
+  text-decoration: line-through;
+}
+
+.week-routine-head {
+  display: grid;
+  gap: 3px;
+  margin: 18px 2px 8px;
+}
+
+.week-routine-head span {
+  color: #8fa4bc;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: .1em;
+}
+
+.week-routine-head small {
+  color: #647990;
+  font-size: 9px;
+}
+
+.workstream-hero {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.workstream-hero > div {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.065);
+  border-radius: 13px;
+  background: rgba(255,255,255,.02);
+}
+
+.workstream-hero span {
+  color: #7f93aa;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: .08em;
+}
+
+.workstream-hero strong {
+  color: #edf2f7;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.workstream-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(95px,1fr));
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.workstream-week::-webkit-scrollbar {
+  display: none;
+}
+
+.workstream-day {
+  min-width: 95px;
+  padding: 9px;
+  border: 1px solid rgba(255,255,255,.055);
+  border-radius: 12px;
+  background: rgba(255,255,255,.018);
+}
+
+.workstream-day.is-today {
+  border-color: rgba(255,181,46,.32);
+}
+
+.workstream-day__date {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+  align-items: baseline;
+}
+
+.workstream-day__date strong {
+  color: #eef2f7;
+  font-size: 10px;
+}
+
+.workstream-day__date span,
+.workstream-day__capacity {
+  color: #758aa2;
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+}
+
+.workstream-day__action {
+  display: grid;
+  gap: 2px;
+  margin-top: 7px;
+  padding: 6px;
+  border-radius: 8px;
+  background: rgba(255,181,46,.055);
+}
+
+.workstream-day__action span {
+  color: #e5ebf1;
+  font-size: 8.5px;
+  line-height: 1.3;
+}
+
+.workstream-day__action small,
+.workstream-day__empty {
+  color: #75899f;
+  font-size: 7.5px;
+}
+
+.workstream-day__action.is-done {
+  opacity: .5;
+}
+
+.workstream-day__capacity {
+  display: block;
+  margin-top: 7px;
+  text-align: right;
+}
+
+.workstream-schedule {
+  display: grid;
+  gap: 7px;
+}
+
+.workstream-schedule__item {
+  display: grid;
+  grid-template-columns: 58px minmax(0,1fr);
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,.055);
+  border-radius: 11px;
+  background: rgba(255,255,255,.018);
+}
+
+.workstream-schedule__item > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.workstream-schedule__item strong {
+  color: #e9eef4;
+  font-size: 10.5px;
+}
+
+.workstream-schedule__item span {
+  color: #7e92a8;
+  font-size: 8.5px;
+  line-height: 1.35;
+}
+
+.workstream-schedule__item.is-done {
+  opacity: .55;
+}
+
+.workstream-dod {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 18px;
+  color: #cfd8e2;
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+
+@media (min-width: 760px) {
+  .weekcal-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+
+  .workstream-hero {
+    grid-template-columns: repeat(3, minmax(0,1fr));
+  }
+}

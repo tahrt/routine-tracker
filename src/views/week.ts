@@ -12,6 +12,7 @@ export interface WeekViewProps {
   todayKey: string;
   records: Readonly<Record<string, DayRecord | undefined>>;
   planningHtml?: string;
+  calendarHtml?: string;
 }
 
 const bar = (key: string, todayKey: string, rec: DayRecord | undefined): string => {
@@ -38,13 +39,14 @@ const bar = (key: string, todayKey: string, rec: DayRecord | undefined): string 
     </${future ? 'div' : 'button'}>`;
 };
 
-export const renderWeek = ({ anchorKey, todayKey, records, planningHtml = '' }: WeekViewProps): string => {
+export const renderWeek = ({ anchorKey, todayKey, records, planningHtml = '', calendarHtml = '' }: WeekViewProps): string => {
   const anchor = parseKey(anchorKey);
   const monday = getMonday(anchor);
   const keys = weekKeys(anchor);
   const elapsed = keys.filter((k) => !isFutureKey(k, todayKey));
   const sum = weekSummary(elapsed, records);
-  const atCurrentWeek = getMonday(parseKey(todayKey)).getTime() === monday.getTime();
+  const maxPlanningWeek = getMonday(addDays(parseKey(todayKey), 28));
+  const atPlanningHorizon = monday.getTime() >= maxPlanningWeek.getTime();
 
   const parts = [`${sum.tracked} of ${elapsed.length} day${elapsed.length === 1 ? '' : 's'} tracked`];
   if (sum.rest) parts.push(`${sum.rest} rest`);
@@ -63,11 +65,13 @@ export const renderWeek = ({ anchorKey, todayKey, records, planningHtml = '' }: 
           <p class="week__meta">${esc(parts.join(' · '))}</p>
         </div>
         <button class="navbtn" type="button" data-action="week-nav" data-delta="1"
-          aria-label="Next week" ${atCurrentWeek ? 'disabled' : ''}>›</button>
+          aria-label="Next week" ${atPlanningHorizon ? 'disabled' : ''}>›</button>
       </header>
 
       ${planningHtml}
+      ${calendarHtml}
 
+      <div class="week-routine-head"><span>ROUTINE HISTORY</span><small>Habit consistency stays separate from execution planning.</small></div>
       <div class="week__avg">
         <span class="week__avgvalue">${sum.average}<span class="meter__pct">%</span></span>
         <span class="week__avglabel">week average${sum.averageTotal !== sum.average ? ` · total ${sum.averageTotal}%` : ''}</span>

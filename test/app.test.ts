@@ -95,13 +95,22 @@ describe('app', () => {
     expect(app().textContent).toContain('17 Aug – 23 Aug 2026');
   });
 
-  it('will not step past the current week', () => {
+  it('can plan into future weeks but stops at the four-week planning horizon', () => {
     boot();
     click(app().querySelector('[data-action="today-mode"][data-mode="week"]'));
+
     const next = app().querySelector('[data-action="week-nav"][data-delta="1"]');
-    expect((next as HTMLButtonElement).disabled).toBe(true);
+    expect((next as HTMLButtonElement).disabled).toBe(false);
     click(next);
-    expect(app().textContent).toContain('24 Aug – 30 Aug 2026');
+    expect(app().textContent).toContain('31 Aug – 6 Sep 2026');
+
+    click(app().querySelector('[data-action="week-nav"][data-delta="1"]'));
+    click(app().querySelector('[data-action="week-nav"][data-delta="1"]'));
+    click(app().querySelector('[data-action="week-nav"][data-delta="1"]'));
+    expect(app().textContent).toContain('21 Sep – 27 Sep 2026');
+
+    const horizonNext = app().querySelector('[data-action="week-nav"][data-delta="1"]');
+    expect((horizonNext as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('shows a week average that ignores rest days', () => {
@@ -222,6 +231,20 @@ describe('app', () => {
     click(app().querySelector('[data-action="close-planner"]'));
     expect(app().textContent).toContain('Prepare application');
     expect(app().textContent).toContain('MUST WIN');
+    expect(app().textContent).toContain("TODAY'S AGENDA");
+    expect(app().querySelector('[data-action="toggle-task"][data-id="jobsearch"]')).toBeNull();
+    expect(app().querySelector('[data-action="planning-action-status"][data-status="done"]')).not.toBeNull();
+
+    click(app().querySelector('[data-action="open-workstream"]'));
+    expect(app().textContent).toContain('Job Search');
+    expect(app().textContent).toContain('SCHEDULE');
+    expect(app().textContent).toContain('Prepare application');
+    click(app().querySelector('[data-action="close-workstream"]'));
+    expect(app().textContent).toContain("TODAY'S AGENDA");
+
+    click(app().querySelector('[data-action="today-mode"][data-mode="week"]'));
+    expect(app().textContent).toContain('EXECUTION CALENDAR');
+    expect(app().textContent).toContain('Prepare application');
   });
 
   it('completing a linked planned action uses the existing habit snapshot path', () => {
@@ -279,6 +302,8 @@ describe('app', () => {
     click(app().querySelector('[data-action="close-planner"]'));
     expect(app().textContent).toContain('Example Co — Prepare interview');
     expect(app().textContent).toContain('Live pipeline');
+    expect(app().textContent).toContain('0 / 2 blocks scheduled');
+    expect(app().textContent).toContain('not scheduled');
   });
 
   it('replans explicitly and saves a weekly review without carrying actions automatically', () => {

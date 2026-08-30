@@ -16,10 +16,10 @@ npm run icons    # regenerate PWA icons (only after changing the mark)
 
 ## What it does
 
-- **Today** — premium dashboard with Focus Block capacity, Planning Must Win / Next actions, routine progress, Continue Learning, and the routine checklist.
-- **Week** — finite planning capacity + workstream commitments above the existing Mon–Sun routine history; past days remain tappable for retroactive logging.
-- **Planning** — local Workstreams, Week Plans, dated Planned Actions, explicit Move/Defer/Cancel, deadline-risk warnings, and Weekly Review.
-- **Job Applications** — local pipeline tracker with stages, fit, due next actions, Needs Attention, live-interview priority, and Today integration.
+- **Today** — one execution agenda: Focus Block summary + Must Win highlight + a unified checklist where dated Planned Actions replace matching generic Job Search / Project / Learning placeholders.
+- **Week** — Week Plan commitments + a Mon–Sun execution calendar with scheduled/capacity/free state, followed by the existing Routine History chart.
+- **Planning** — local Workstreams, Week Plans, dated Planned Actions, explicit Move/Defer/Cancel, deadline-risk warnings, Weekly Review, and per-Workstream calendar/schedule detail.
+- **Job Applications** — local pipeline tracker with stages, fit, due next actions and Needs Attention; due items are alerts until explicitly scheduled, so they do not fake Focus Block usage.
 - **Learn** — structured Business, AI Agent and Negotiation paths with stages, video resources, Core/Recommended priorities, time-weighted completion and Continue Learning.
 - **Insights** — weekly consistency, habit completion, streaks, learning progress and a simple Momentum status.
 - **Day status** — `active` / `rest` / `skipped`. Rest days are excluded from the week average.

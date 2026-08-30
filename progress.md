@@ -2,72 +2,57 @@
 
 Last updated: 2026-08-30
 
-## Planning Layer V1 — in progress
+## Planning / Execution Layer — V2.1
 
-Product/implementation plan: `ROUTINE-V2-PLAN.md`
+Product plan: `ROUTINE-V2-PLAN.md`
 
 Current status as of 2026-08-30:
 
-- Phase 0 architecture audit is complete.
-- Scope is frozen around an additive Planning Layer: Workstreams, Capacity, Week Plan, Planned Actions, Application Tracker, deterministic replan, and Weekly Review.
-- Existing habit ids, day snapshots, streak rules, Learning progress, backup/import, and PWA update behavior remain protected.
-- V5 runtime storage decision: separate planning keys plus one nested `planning` object in export/import.
-- **Phase 1 Planning Foundation is complete locally.**
-  - Planning V1 types added to `src/types.ts`
-  - default capacity + planning normalization added in `src/config/planning.ts`
-  - schema migration advanced from v4 → v5 in `src/store/migrations.ts`
-  - separate planning storage keys + Store methods added in `src/store/localStore.ts`
-  - export/import now round-trips Planning state
-  - migration/store tests expanded for V5 planning state
-- Verification on 2026-08-30:
-  - `npm test` — **9/9 files, 136/136 tests passed**
-  - `npm run build` — TypeScript + Vite + service-worker build passed
-  - service-worker build: `866e28b6dbc2-20260830115643`
-- Phase 2 Week + Today Planning UI is complete locally:
-  - deterministic capacity-aware selector in `src/lib/planning.ts`
-  - Today shows Focus Block capacity, Must Win / Next, and explicit deadline-risk warnings
-  - Week shows total capacity, planned/completed blocks, and commitment progress
-  - local Planning manager can create/edit Workstreams, allocate Week commitments, and add dated Planned Actions
-  - action Done / Defer / Cancel is explicit; missed actions do not auto-carry
-  - a linked action completes an existing matching routine habit only through the normal DayRecord snapshot path
-  - new planning CSS lives in `src/redesign.css`
-- Verification after Phase 2 on 2026-08-30:
-  - `npm test` — **10/10 files, 147/147 tests passed**
-  - `npm run build` — TypeScript + Vite + service-worker build passed
-- Phase 3 Application Tracker is complete locally:
-  - dedicated local Application Tracker UI
-  - add/update stage, fit, URL, next action, due date, next event, fit reason, and private notes
-  - pipeline metrics + Needs Attention
-  - due/overdue application next actions feed Today automatically when a career workstream is active
-  - live screening/interview/final work outranks generic Job Search work
-  - Withdrawn is the non-destructive V1 removal path; no hard-delete of application history
-- Verification after Phase 3 on 2026-08-30:
-  - `npm test` — **10/10 files, 148/148 tests passed**
-  - `npm run build` — passed
-- Phase 4 Replan + Weekly Review is complete locally:
-  - explicit Move / Defer / Cancel for missed actions
-  - Move keeps the original action as deferred and creates a new dated action
-  - under-scheduled Week commitments show AT RISK
-  - missed project deadlines remain explicit and never slide automatically
-  - Weekly Review persists wins, misses, bottleneck, and one adjustment
-  - Create next week copies commitments only; actions are never auto-carried
-  - deferred actions do not consume scheduled-block totals
-- Verification after Phase 4 on 2026-08-30:
-  - `npm test` — **10/10 files, 150/150 tests passed**
-  - `npm run build` — passed
-- Phase 5 automated release gate has passed:
-  - final `npm test` — **10/10 files, 150/150 tests passed**
-  - final `npm run build` — TypeScript + Vite + service-worker build passed
-  - PWA regression is included and passing
-  - V4 → V5 migration + planning export/import round-trip are covered
-  - README updated for Planning + Application Tracker
-- Planning V1 source commits were pushed to `origin/main` on 2026-08-30.
-- `npm run deploy` completed successfully and published `dist/` to the `gh-pages` branch from source commit `1ed7309`.
-- deployed service-worker build: `1ed73093bfc5-20260830121929`
+- Planning V1 foundation is shipped on schema v5.
+- Workstreams, Capacity Profiles, Week Plans, Planned Actions, Application Tracker, explicit replan, Weekly Review, export/import, and PWA update flow are already in place.
+- Real iPhone use exposed one UX problem: Planning and Routine looked like two separate apps stacked on Today.
+- V2.1 corrects the execution UX without changing the storage schema or historical habit model.
 
-Remaining release gate:
+V2.1 implemented locally:
 
-> Open the existing installed Routine icon on iPhone, accept **Update now** when offered, then smoke-test Planning / Week / Application Tracker with existing local data. Do **not** delete/re-add the Home Screen app.
+- **Unified Today Agenda**
+  - dated PlannedActions now appear directly in the daily checklist
+  - a concrete action hides the generic routine placeholder for the same linked habit
+  - the underlying DayTask snapshot remains intact
+  - agenda progress is presentation-only; historical habit stats are unchanged
+- **Correct planner semantics**
+  - only explicit PlannedActions consume Focus Block capacity
+  - due application actions are Needs Attention alerts until scheduled
+  - Workstream next actions are suggestions only
+  - explicit overbooking is shown instead of silently dropping tasks
+- **Week Execution Calendar**
+  - Mon–Sun scheduled actions with used/capacity/free state
+  - future planning navigation up to four weeks
+  - Routine History stays as a separate habit-consistency section
+- **Workstream Detail**
+  - goal / deadline / milestone / next action / Definition of Done
+  - filtered weekly calendar and upcoming schedule
+  - Career Workstreams link to Application Tracker
+  - if current week is empty, calendar anchors to the nearest upcoming scheduled week
+
+Safety invariants preserved:
+
+- no DayRecord migration or rewrite
+- stable habit ids remain unchanged
+- Learning progress remains unchanged
+- no automatic deadline sliding
+- no automatic missed-task carry-over
+- no new backend / sync dependency
+- existing imported Planning V1 data remains valid
+
+Verification before final release:
+
+- `npm test` — **10/10 files, 150/150 tests passed** after the V2.1 semantics/UI changes
+- `npm run build` — passed before the final documentation pass
+
+Next release step:
+
+> Run final tests + production build, commit, push `main`, deploy `gh-pages`, then verify the update on the existing iPhone Home Screen install.
 
 ## Current released state
 

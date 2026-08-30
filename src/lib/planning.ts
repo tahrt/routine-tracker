@@ -10,7 +10,7 @@ import type {
 
 export interface TodayPlanItem {
   id: string;
-  source: 'action' | 'application' | 'workstream';
+  source: 'action';
   workstreamId: string;
   title: string;
   focusBlocks: number;
@@ -20,12 +20,35 @@ export interface TodayPlanItem {
   reason: string;
 }
 
+export interface TodayAttentionItem {
+  id: string;
+  source: 'application';
+  workstreamId: string;
+  title: string;
+  due: string;
+  applicationId: string;
+  reason: string;
+}
+
+export interface TodaySuggestion {
+  id: string;
+  source: 'workstream';
+  workstreamId: string;
+  title: string;
+  due: string | null;
+  reason: string;
+}
+
 export interface TodayPlan {
   date: string;
   capacityBlocks: number;
+  /** All scheduled blocks for the date, including actions already completed. */
   usedBlocks: number;
   remainingBlocks: number;
+  /** Remaining explicitly scheduled work only. Suggestions/alerts never live here. */
   items: TodayPlanItem[];
+  attention: TodayAttentionItem[];
+  suggestions: TodaySuggestion[];
   warnings: string[];
 }
 
@@ -113,10 +136,17 @@ export const selectTodayPlan = ({
   const ranked: RankedItem[] = [];
   const warnings: string[] = [];
 
-  // Persisted actions only count on their explicitly assigned date. Older actions
-  // are intentionally NOT auto-carried into today.
-  for (const action of Object.values(plannedActions)) {
-    if (action.status !== 'planned' || action.date !== dateK) continue;
+  const scheduledToday = Object.values(plannedActions).filter(
+    (action) =>
+      action.date === dateK &&
+      (action.status === 'planned' || action.status === 'done') &&
+      activeById.has(action.workstreamId),
+  );
+  const usedBlocks = scheduledToday.reduce((sum, action) => sum + fitBlocks(action.focusBlocks), 0);
+
+  // Only explicit PlannedAction records consume capacity and become executable Today items.
+  for (const action of scheduledToday) {
+    if (action.status !== 'planned') continue;
     const workstream = activeById.get(action.workstreamId);
     if (!workstream) continue;
     const blocks = fitBlocks(action.focusBlocks);
@@ -138,8 +168,11 @@ export const selectTodayPlan = ({
     });
   }
 
-  // A due application next action can surface without duplicating it into a
-  // PlannedAction. This is a view candidate only; rendering never mutates data.
+  ranked.sort((a, b) => b.score - a.score || a.stableOrder.localeCompare(b.stableOrder));
+  const items = ranked.slice(0, 2).map((candidate) => candidate.item);
+
+  // Application nextAction is an alert unless explicitly scheduled as PlannedAction.
+  const attention: TodayAttentionItem[] = [];
   const career = applicationWorkstream(active);
   if (career) {
     for (const application of Object.values(jobApplications)) {
@@ -153,72 +186,58 @@ export const selectTodayPlan = ({
       ) {
         continue;
       }
-      const hasExplicitAction = Object.values(plannedActions).some(
-        (action) =>
-          action.status === 'planned' &&
-          action.date === dateK &&
-          action.applicationId === application.id,
-      );
+
+      const hasExplicitAction = scheduledToday.some((action) => action.applicationId === application.id);
       if (hasExplicitAction) continue;
 
-      const interviewBoost =
-        application.stage === 'screening' || application.stage === 'interview' || application.stage === 'final' ? 80 : 0;
-      ranked.push({
-        item: {
-          id: `application:${application.id}`,
-          source: 'application',
-          workstreamId: career.id,
-          title: `${application.company} — ${application.nextAction}`,
-          focusBlocks: 1,
-          due: application.nextActionDue,
-          linkedHabitId: career.linkedHabitId ?? null,
-          applicationId: application.id,
-          reason: interviewBoost > 0 ? 'Live pipeline' : application.nextActionDue < dateK ? 'Overdue application' : 'Application due',
-        },
-        score:
-          400 +
-          interviewBoost +
-          deadlineUrgency(application.nextActionDue, dateK) +
-          PRIORITY_SCORE[career.outcome.priority],
-        stableOrder: `1:${application.id}`,
+      const livePipeline =
+        application.stage === 'screening' || application.stage === 'interview' || application.stage === 'final';
+      attention.push({
+        id: `application:${application.id}`,
+        source: 'application',
+        workstreamId: career.id,
+        title: `${application.company} — ${application.nextAction}`,
+        due: application.nextActionDue,
+        applicationId: application.id,
+        reason: livePipeline
+          ? 'Live pipeline'
+          : application.nextActionDue < dateK
+            ? 'Overdue application'
+            : 'Application due',
       });
     }
   }
 
-  // Workstream nextAction is fallback context, not an automatically carried task.
-  // Only use it when the user has no explicit action for that workstream today.
+  attention.sort((a, b) => {
+    const aLive = a.reason === 'Live pipeline' ? 1 : 0;
+    const bLive = b.reason === 'Live pipeline' ? 1 : 0;
+    return bLive - aLive || a.due.localeCompare(b.due) || a.id.localeCompare(b.id);
+  });
+
+  // Workstream nextAction is context only. It must never consume Focus Block capacity.
+  const suggestions: TodaySuggestion[] = [];
   for (const workstream of active) {
     const title = workstream.execution.nextAction?.trim();
     if (!title) continue;
-    const alreadyRepresented = ranked.some((candidate) => candidate.item.workstreamId === workstream.id);
-    if (alreadyRepresented) continue;
-    ranked.push({
-      item: {
-        id: `workstream:${workstream.id}`,
-        source: 'workstream',
-        workstreamId: workstream.id,
-        title,
-        focusBlocks: 1,
-        due: workstream.plan.deadline,
-        linkedHabitId: workstream.linkedHabitId ?? null,
-        applicationId: null,
-        reason: workstream.outcome.priority === 'north-star' ? 'North Star next action' : 'Active milestone',
-      },
-      score: 100 + deadlineUrgency(workstream.plan.deadline, dateK) + PRIORITY_SCORE[workstream.outcome.priority],
-      stableOrder: `2:${workstream.id}`,
+    const alreadyScheduled = scheduledToday.some((action) => action.workstreamId === workstream.id);
+    if (alreadyScheduled) continue;
+    suggestions.push({
+      id: `workstream:${workstream.id}`,
+      source: 'workstream',
+      workstreamId: workstream.id,
+      title,
+      due: workstream.plan.deadline,
+      reason: workstream.outcome.priority === 'north-star' ? 'North Star next action' : 'Active milestone',
     });
   }
 
-  ranked.sort((a, b) => b.score - a.score || a.stableOrder.localeCompare(b.stableOrder));
-
-  const items: TodayPlanItem[] = [];
-  let usedBlocks = 0;
-  for (const candidate of ranked) {
-    if (items.length >= 2) break;
-    if (usedBlocks + candidate.item.focusBlocks > capacityBlocks) continue;
-    items.push(candidate.item);
-    usedBlocks += candidate.item.focusBlocks;
-  }
+  suggestions.sort(
+    (a, b) =>
+      deadlineUrgency(b.due, dateK) - deadlineUrgency(a.due, dateK) ||
+      PRIORITY_SCORE[workstreams[b.workstreamId]?.outcome.priority ?? 'next'] -
+        PRIORITY_SCORE[workstreams[a.workstreamId]?.outcome.priority ?? 'next'] ||
+      a.id.localeCompare(b.id),
+  );
 
   const overdueProject = active.find(
     (workstream) =>
@@ -228,9 +247,8 @@ export const selectTodayPlan = ({
   );
   if (overdueProject) warnings.push(`${overdueProject.title}: deadline missed — replan explicitly.`);
 
-  const oversize = ranked.find((candidate) => candidate.item.focusBlocks > capacityBlocks);
-  if (capacityBlocks > 0 && items.length === 0 && oversize) {
-    warnings.push('Top action is larger than today’s capacity. Replan instead of overbooking.');
+  if (usedBlocks > capacityBlocks) {
+    warnings.push(`Today is overbooked by ${usedBlocks - capacityBlocks} Focus Block${usedBlocks - capacityBlocks === 1 ? '' : 's'}.`);
   }
 
   return {
@@ -239,6 +257,8 @@ export const selectTodayPlan = ({
     usedBlocks,
     remainingBlocks: Math.max(0, capacityBlocks - usedBlocks),
     items,
+    attention,
+    suggestions,
     warnings,
   };
 };

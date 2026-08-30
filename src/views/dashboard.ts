@@ -1,8 +1,16 @@
 import { formatLong, parseKey } from '../lib/date';
 import { previewTasks } from '../lib/day';
 import { formatLearningTime, nextCoreLesson, pathStats } from '../lib/learning';
-import { corePct, hasCoreTasks, pct } from '../lib/stats';
-import type { DayRecord, DayStatus, DayTask, LearningPath, LearningProgress, TemplateVersion } from '../types';
+import type {
+  DayRecord,
+  DayStatus,
+  DayTask,
+  LearningPath,
+  LearningProgress,
+  PlannedAction,
+  TemplateVersion,
+  Workstream,
+} from '../types';
 import { cx, esc } from '../ui/dom';
 
 export interface DashboardViewProps {
@@ -14,6 +22,8 @@ export interface DashboardViewProps {
   greeting: string;
   outOfSync: boolean;
   planningHtml?: string;
+  plannedActions?: Readonly<Record<string, PlannedAction>>;
+  workstreams?: Readonly<Record<string, Workstream>>;
 }
 
 const iconForTask = (task: DayTask): string => {
@@ -56,26 +66,61 @@ export const renderTodayDashboard = ({
   greeting,
   outOfSync,
   planningHtml = '',
+  plannedActions = {},
+  workstreams = {},
 }: DashboardViewProps): string => {
   const preview = record ? null : previewTasks(dateKey, templates);
   const tasks = record?.tasks ?? preview?.tasks ?? [];
   const dayType = record?.dayType ?? preview?.dayType ?? '';
   const status: DayStatus = record?.status ?? 'active';
   const disabled = status === 'rest';
-  const total = pct(tasks);
-  const core = corePct(tasks);
-  const coreTasks = tasks.filter((task) => task.core);
-  const coreDone = coreTasks.filter((task) => task.done).length;
-  const displayCoreTotal = coreTasks.length || tasks.length;
-  const displayCoreDone = coreTasks.length ? coreDone : tasks.filter((task) => task.done).length;
-  const remaining = tasks.filter((task) => !task.done);
-  const upNext = remaining.find((task) => task.core) ?? remaining[0];
+  const todayActions = Object.values(plannedActions)
+    .filter(
+      (action) =>
+        action.date === dateKey &&
+        (action.status === 'planned' || action.status === 'done') &&
+        workstreams[action.workstreamId]?.execution.status === 'active',
+    )
+    .sort((a, b) => a.id.localeCompare(b.id));
+
+  const plannedHabits = new Set(
+    todayActions.map((action) => action.linkedHabitId).filter((habit): habit is string => Boolean(habit)),
+  );
+  const agendaRoutineTasks = tasks.filter((task) => !(task.habit && plannedHabits.has(task.habit)));
+  const routineCore = agendaRoutineTasks.filter((task) => task.core);
+  const scoredRoutine = routineCore.length ? routineCore : agendaRoutineTasks;
+  const agendaTotal = scoredRoutine.length + todayActions.length;
+  const agendaDone =
+    scoredRoutine.filter((task) => task.done).length +
+    todayActions.filter((action) => action.status === 'done').length;
+  const ringRate = agendaTotal > 0 ? Math.round((agendaDone / agendaTotal) * 100) : 0;
+  const isComplete = agendaTotal > 0 && agendaDone === agendaTotal;
+
   const continuePath = learningPaths.find((path) => nextCoreLesson(path, learningProgress));
   const nextLesson = continuePath ? nextCoreLesson(continuePath, learningProgress) : undefined;
   const continueStats = continuePath ? pathStats(continuePath, learningProgress) : undefined;
   const continueAction = continueStats && continueStats.completedLessons > 0 ? 'Resume' : 'Start';
-  const isComplete = tasks.length > 0 && remaining.length === 0;
-  const ringRate = hasCoreTasks(tasks) ? core : total;
+  const learningAlreadyPlanned = plannedHabits.has('learning');
+
+  const plannedAgendaItems = todayActions
+    .map((action) => {
+      const done = action.status === 'done';
+      const workstream = workstreams[action.workstreamId];
+      return `<li class="${cx('today-task', 'today-task--planned', done && 'is-done')}">
+        <button class="today-task__hit" type="button" data-action="planning-action-status"
+                data-id="${esc(action.id)}" data-status="${done ? 'planned' : 'done'}"
+                ${disabled ? 'disabled' : ''} aria-pressed="${done}">
+          <span class="today-task__check" aria-hidden="true">${done ? '✓' : '◆'}</span>
+          <span class="today-task__copy">
+            <span class="today-task__name">${esc(action.title)}</span>
+            <span class="today-task__time">${esc(workstream?.title ?? 'Planned action')} · ${action.focusBlocks} Focus Block${action.focusBlocks === 1 ? '' : 's'}</span>
+          </span>
+          <span class="today-task__core today-task__core--focus">FOCUS</span>
+          <span class="today-task__chev" aria-hidden="true">›</span>
+        </button>
+      </li>`;
+    })
+    .join('');
 
   return `
     <section class="today-dashboard">
@@ -115,8 +160,8 @@ export const renderTodayDashboard = ({
           <div class="today-ring__inner"><strong>${ringRate}%</strong></div>
         </div>
         <div class="today-score__copy">
-          <strong>${isComplete ? 'Day complete' : 'of today complete'}</strong>
-          <span>${displayCoreDone} of ${displayCoreTotal} ${coreTasks.length ? 'core ' : ''}tasks</span>
+          <strong>${isComplete ? 'Agenda complete' : "today's agenda"}</strong>
+          <span>${agendaDone} of ${agendaTotal} important items</span>
           <div class="today-score__bar" role="img" aria-label="${ringRate}% complete">
             <span style="width:${ringRate}%"></span>
           </div>
@@ -134,27 +179,7 @@ export const renderTodayDashboard = ({
         ${statusButton('skipped', status, 'Skip')}
       </div>
 
-      ${upNext && !disabled
-        ? `<section class="up-next">
-             <div class="up-next__label">${planningHtml ? 'ROUTINE NEXT' : 'UP NEXT'}</div>
-             <div class="up-next__main">
-               <span class="up-next__icon">${iconForTask(upNext)}</span>
-               <div class="up-next__copy">
-                 <h2>${esc(upNext.name)}</h2>
-                 <strong>${esc(upNext.time || 'Next')}</strong>
-                 <span>${esc(dayType)}</span>
-               </div>
-               <button class="up-next__cta" type="button" data-action="toggle-task" data-id="${esc(upNext.id)}">
-                 Done <span aria-hidden="true">→</span>
-               </button>
-             </div>
-           </section>`
-        : disabled
-          ? `<section class="up-next up-next--rest"><div class="up-next__label">TODAY</div><h2>Recovery mode</h2><p>Nothing to chase. Rest days are excluded from the week average.</p></section>`
-          : `<section class="up-next up-next--complete"><div class="up-next__label">TODAY COMPLETE</div><h2>Everything is done.</h2><p>Close the loop and enjoy the rest of the day.</p></section>`
-      }
-
-      ${continuePath && nextLesson && continueStats
+      ${continuePath && nextLesson && continueStats && !learningAlreadyPlanned
         ? `<button class="today-learning" type="button" data-action="open-learning-path" data-id="${esc(continuePath.id)}"
                    aria-label="${continueAction} learning: ${esc(nextLesson.title)}">
              <div class="today-learning__label">CONTINUE LEARNING</div>
@@ -186,15 +211,17 @@ export const renderTodayDashboard = ({
         : ''
       }
 
-      <section class="today-rest">
+      <section class="today-rest today-agenda">
         <div class="today-section-head">
-          <span>REST OF TODAY</span>
-          <strong>${tasks.filter((task) => task.done).length} / ${tasks.length}</strong>
+          <span>TODAY'S AGENDA</span>
+          <strong>${agendaDone} / ${agendaTotal}</strong>
         </div>
-        ${tasks.length
-          ? `<ul class="today-tasks">${tasks.map((task) => taskItem(task, disabled)).join('')}</ul>`
-          : '<p class="empty">No tasks scheduled for today.</p>'
+        ${(plannedAgendaItems || agendaRoutineTasks.length)
+          ? `<ul class="today-tasks">${plannedAgendaItems}${agendaRoutineTasks.map((task) => taskItem(task, disabled)).join('')}</ul>`
+          : '<p class="empty">Nothing scheduled for today.</p>'
         }
+        <p class="today-agenda__hint">Focus actions replace matching generic Job Search / Project / Learning placeholders here. Routine history stays intact underneath.</p>
       </section>
+      <p class="today-agenda__routine-note">Routine template: ${esc(dayType || 'No template')}</p>
     </section>`;
 };
