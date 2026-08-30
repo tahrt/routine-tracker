@@ -77,6 +77,10 @@ Final iPhone date-field fix:
 - no schema/storage/data changes
 - verification: `npm test` — **10/10 files, 153/153 tests passed**
 - verification: `npm run build` — TypeScript + Vite + service-worker build passed
+- fix commit: `0f04f95`
+- pushed to `origin/main`
+- deployed service-worker build: `0f04f954c0fe-20260830144955`
+- published successfully to `gh-pages`
 
 
 Current status as of 2026-08-30:

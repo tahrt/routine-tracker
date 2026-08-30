@@ -231,10 +231,14 @@ Final rule:
 - this applies globally to Planning, Workstream editing, Application Pipeline, Move/Replan, and other date fields
 - no schema or data change
 
-Verification before release:
+Verification + release:
 
 - 10/10 test files, **153/153 tests passed**
 - TypeScript + Vite + service-worker build passed
+- fix commit: `0f04f95`
+- pushed to `origin/main`
+- deployed service-worker build: `0f04f954c0fe-20260830144955`
+- published successfully to `gh-pages`
 
 V2.2 remains implemented, verified, pushed, and deployed.
 
