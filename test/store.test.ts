@@ -210,6 +210,102 @@ describe('learning progress', () => {
   });
 });
 
+describe('planning foundation', () => {
+  it('seeds only capacity and keeps private planning collections empty', () => {
+    const { kv, store } = fresh();
+    expect(store.getCapacityProfiles().map((profile) => profile.focusBlocks)).toEqual([3, 2, 2, 1, 2, 1, 3]);
+    expect(store.getWorkstreams()).toEqual({});
+    expect(store.getWeekPlans()).toEqual({});
+    expect(store.getPlannedActions()).toEqual({});
+    expect(store.getJobApplications()).toEqual({});
+    expect(kv.get('rt:planning:capacity')).not.toBeNull();
+    expect(store.dayKeys()).toEqual([]);
+  });
+
+  it('persists planning domains in separate runtime keys without creating a day record', () => {
+    const { kv, store } = fresh();
+
+    store.upsertWorkstream({
+      id: 'job-search',
+      type: 'career',
+      title: 'Job Search',
+      outcome: { goal: 'Get a good job', priority: 'north-star' },
+      plan: { deadline: '2026-11-30', definitionOfDone: ['Accepted offer'] },
+      execution: { status: 'active', milestone: 'Enter market', weeklyCommitment: 'Apply to strong-fit roles', nextAction: 'Prepare application' },
+      linkedHabitId: 'jobsearch',
+    });
+    store.upsertWeekPlan({
+      id: '2026-W36',
+      startsOn: '2026-08-31',
+      commitments: [{ workstreamId: 'job-search', targetBlocks: 6, outcome: 'Enter the market' }],
+    });
+    store.upsertPlannedAction({
+      id: 'action-1',
+      date: TODAY,
+      workstreamId: 'job-search',
+      title: 'Tailor application',
+      focusBlocks: 1,
+      linkedHabitId: 'jobsearch',
+      status: 'planned',
+    });
+    store.upsertJobApplication({
+      id: 'app-1',
+      company: 'Example Co',
+      role: 'AI Solutions Builder',
+      stage: 'preparing',
+      nextAction: 'Tailor application',
+      nextActionDue: TODAY,
+    });
+
+    expect(kv.get('rt:planning:workstreams')).not.toBeNull();
+    expect(kv.get('rt:planning:weeks')).not.toBeNull();
+    expect(kv.get('rt:planning:actions')).not.toBeNull();
+    expect(kv.get('rt:job:applications')).not.toBeNull();
+    expect(store.getWorkstreams()['job-search']?.outcome.priority).toBe('north-star');
+    expect(store.getWeekPlans()['2026-W36']?.commitments[0]?.targetBlocks).toBe(6);
+    expect(store.getPlannedActions()['action-1']?.status).toBe('planned');
+    expect(store.getJobApplications()['app-1']?.stage).toBe('preparing');
+    expect(store.dayKeys()).toEqual([]);
+  });
+
+  it('validates and persists a full seven-day capacity profile', () => {
+    const { store } = fresh();
+    const edited = store.getCapacityProfiles().map((profile) =>
+      profile.weekday === 1 ? { ...profile, focusBlocks: 1, label: 'Recovery Monday' } : profile,
+    );
+    store.setCapacityProfiles(edited);
+    expect(store.getCapacityProfiles().find((profile) => profile.weekday === 1)?.focusBlocks).toBe(1);
+    expect(() => store.setCapacityProfiles(edited.slice(0, 6))).toThrow(/each weekday/);
+  });
+
+  it('round-trips planning state through backup/import', () => {
+    const { store } = fresh();
+    store.upsertWorkstream({
+      id: 'project-1',
+      type: 'project',
+      title: 'Project One',
+      outcome: { goal: 'Ship', priority: 'primary' },
+      plan: { deadline: '2026-09-07', definitionOfDone: ['Released'] },
+      execution: { status: 'active', milestone: 'Foundation', weeklyCommitment: 'Finish storage', nextAction: 'Write tests' },
+      linkedHabitId: 'personal',
+    });
+    store.upsertJobApplication({ id: 'app-2', company: 'Example Co', role: 'AI Product', stage: 'saved' });
+    const backup = structuredClone(store.exportAll());
+
+    expect(backup.planning.workstreams['project-1']?.title).toBe('Project One');
+    expect(backup.planning.jobApplications['app-2']?.stage).toBe('saved');
+
+    store.upsertWorkstream({
+      ...backup.planning.workstreams['project-1']!,
+      title: 'Changed locally',
+    });
+    store.importAll(backup);
+
+    expect(store.getWorkstreams()['project-1']?.title).toBe('Project One');
+    expect(store.getJobApplications()['app-2']?.stage).toBe('saved');
+  });
+});
+
 describe('settings', () => {
   it('merges patches and notifies subscribers', () => {
     const { store } = fresh();

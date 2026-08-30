@@ -36,7 +36,7 @@ npm run icons    # regenerate PWA icons (only after changing the mark)
 
 **Learning curriculum vs progress** — curriculum ships in `src/config/learning.ts`, while only personal lesson completion is stored under `rt:learning:progress`. Resource URLs/titles can therefore be improved in a future deploy while stable lesson ids preserve completion.
 
-**Schema versioning** (`src/store/migrations.ts`) — every blob carries `schemaVersion`, migrations run on load and on import, and the pre-migration data is kept under `rt:backup:preMigration:v{n}`. Schema v4 adds Learning Path completion without rewriting existing routine history.
+**Schema versioning** (`src/store/migrations.ts`) — every blob carries `schemaVersion`, migrations run on load and on import, and the pre-migration data is kept under `rt:backup:preMigration:v{n}`. Schema v5 adds the private Planning Layer on top of v4 Learning Path completion without rewriting existing routine history.
 
 **Storage** (`src/store/`) — one `rt:day:YYYY-MM-DD` key per day so a checkbox tap is an O(1) write, plus an `rt:index` cache that is rebuilt from the real keys if it ever diverges. All app code goes through the `Store` interface.
 

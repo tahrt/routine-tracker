@@ -1,8 +1,35 @@
 # Project Progress
 
-Last updated: 2026-08-27
+Last updated: 2026-08-30
 
-## Current state
+## Planning Layer V1 — in progress
+
+Product/implementation plan: `ROUTINE-V2-PLAN.md`
+
+Current status as of 2026-08-30:
+
+- Phase 0 architecture audit is complete.
+- Scope is frozen around an additive Planning Layer: Workstreams, Capacity, Week Plan, Planned Actions, Application Tracker, deterministic replan, and Weekly Review.
+- Existing habit ids, day snapshots, streak rules, Learning progress, backup/import, and PWA update behavior remain protected.
+- V5 runtime storage decision: separate planning keys plus one nested `planning` object in export/import.
+- **Phase 1 Planning Foundation is complete locally.**
+  - Planning V1 types added to `src/types.ts`
+  - default capacity + planning normalization added in `src/config/planning.ts`
+  - schema migration advanced from v4 → v5 in `src/store/migrations.ts`
+  - separate planning storage keys + Store methods added in `src/store/localStore.ts`
+  - export/import now round-trips Planning state
+  - migration/store tests expanded for V5 planning state
+- Verification on 2026-08-30:
+  - `npm test` — **9/9 files, 136/136 tests passed**
+  - `npm run build` — TypeScript + Vite + service-worker build passed
+  - service-worker build: `866e28b6dbc2-20260830115643`
+- Nothing has been pushed or deployed for Planning V1 yet.
+
+Next measurable step:
+
+> Phase 2 — add the Planning section to Today + Week, with deterministic capacity-aware selection and no change to historical habit semantics.
+
+## Current released state
 
 The routine tracker now has three related pieces of long-term tracking functionality:
 

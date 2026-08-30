@@ -11,9 +11,23 @@
  *   rt:index           ['YYYY-MM-DD', …]  sorted, for fast listing
  */
 
+import { defaultPlanningData, normalizePlanningData } from '../config/planning';
 import { DEFAULT_HABITS, DEFAULT_SCHEDULE, DEFAULT_SETTINGS } from '../config/schedule';
 import { isDateKey } from '../lib/date';
-import type { DayRecord, Habit, LearningProgress, RootData, Settings, TemplateVersion } from '../types';
+import type {
+  CapacityProfile,
+  DayRecord,
+  Habit,
+  JobApplication,
+  LearningProgress,
+  PlannedAction,
+  PlanningData,
+  RootData,
+  Settings,
+  TemplateVersion,
+  WeekPlan,
+  Workstream,
+} from '../types';
 import type { KV } from './kv';
 import { CURRENT_SCHEMA_VERSION, migrate, needsMigration, validateImport } from './migrations';
 
@@ -22,6 +36,11 @@ const K = {
   habits: 'rt:habits',
   templates: 'rt:templates',
   learningProgress: 'rt:learning:progress',
+  planningWorkstreams: 'rt:planning:workstreams',
+  planningCapacity: 'rt:planning:capacity',
+  planningWeeks: 'rt:planning:weeks',
+  planningActions: 'rt:planning:actions',
+  jobApplications: 'rt:job:applications',
   index: 'rt:index',
   day: (d: string) => `rt:day:${d}`,
   backupMigration: (v: number) => `rt:backup:preMigration:v${v}`,
@@ -41,6 +60,9 @@ export interface ImportSummary {
   unchanged: number;
   templates: number;
   learningCompleted: number;
+  workstreams: number;
+  plannedActions: number;
+  jobApplications: number;
 }
 
 export interface Store {
@@ -59,6 +81,16 @@ export interface Store {
   getLearningProgress(): LearningProgress;
   setLearningLessonCompleted(lessonId: string, completed: boolean, nowIso: string): LearningProgress;
   clearLearningProgress(): void;
+  getWorkstreams(): Record<string, Workstream>;
+  upsertWorkstream(workstream: Workstream): Workstream;
+  getCapacityProfiles(): CapacityProfile[];
+  setCapacityProfiles(profiles: readonly CapacityProfile[]): CapacityProfile[];
+  getWeekPlans(): Record<string, WeekPlan>;
+  upsertWeekPlan(plan: WeekPlan): WeekPlan;
+  getPlannedActions(): Record<string, PlannedAction>;
+  upsertPlannedAction(action: PlannedAction): PlannedAction;
+  getJobApplications(): Record<string, JobApplication>;
+  upsertJobApplication(application: JobApplication): JobApplication;
   getSettings(): Settings;
   setSettings(patch: Partial<Settings>): Settings;
   exportAll(): RootData;
@@ -105,6 +137,24 @@ export const createLocalStore = (kv: KV): Store => {
   const readLearningProgress = (): LearningProgress => parse<LearningProgress>(kv.get(K.learningProgress), {});
   const writeLearningProgress = (p: LearningProgress): void => kv.set(K.learningProgress, JSON.stringify(p));
 
+  const readPlanning = (): PlanningData =>
+    normalizePlanningData({
+      workstreams: parse<Record<string, Workstream>>(kv.get(K.planningWorkstreams), {}),
+      capacityProfiles: parse<CapacityProfile[]>(kv.get(K.planningCapacity), []),
+      weekPlans: parse<Record<string, WeekPlan>>(kv.get(K.planningWeeks), {}),
+      plannedActions: parse<Record<string, PlannedAction>>(kv.get(K.planningActions), {}),
+      jobApplications: parse<Record<string, JobApplication>>(kv.get(K.jobApplications), {}),
+    });
+
+  const writePlanning = (planning: PlanningData): void => {
+    const normalized = normalizePlanningData(planning);
+    kv.set(K.planningWorkstreams, JSON.stringify(normalized.workstreams));
+    kv.set(K.planningCapacity, JSON.stringify(normalized.capacityProfiles));
+    kv.set(K.planningWeeks, JSON.stringify(normalized.weekPlans));
+    kv.set(K.planningActions, JSON.stringify(normalized.plannedActions));
+    kv.set(K.jobApplications, JSON.stringify(normalized.jobApplications));
+  };
+
   const readDay = (dateK: string): DayRecord | undefined => {
     const raw = kv.get(K.day(dateK));
     return raw === null ? undefined : parse<DayRecord | undefined>(raw, undefined);
@@ -125,6 +175,7 @@ export const createLocalStore = (kv: KV): Store => {
       templates: readTemplates(),
       days,
       learningProgress: readLearningProgress(),
+      planning: readPlanning(),
     };
   };
 
@@ -135,6 +186,7 @@ export const createLocalStore = (kv: KV): Store => {
     writeHabits(root.habits?.length ? root.habits : structuredClone(DEFAULT_HABITS));
     writeTemplates(root.templates);
     writeLearningProgress(root.learningProgress ?? {});
+    writePlanning(root.planning ?? defaultPlanningData());
     const keys = Object.keys(root.days).filter(isDateKey).sort();
     for (const k of keys) kv.set(K.day(k), JSON.stringify(root.days[k]));
     writeIndex(keys);
@@ -147,6 +199,7 @@ export const createLocalStore = (kv: KV): Store => {
       { version: 1, effectiveFrom: todayKey, createdAt: nowIso, days: structuredClone(DEFAULT_SCHEDULE) },
     ]);
     writeLearningProgress({});
+    writePlanning(defaultPlanningData());
     writeIndex([]);
   };
 
@@ -168,6 +221,14 @@ export const createLocalStore = (kv: KV): Store => {
         ]);
       }
       if (readHabits().length === 0) writeHabits(structuredClone(DEFAULT_HABITS));
+      // Planning keys are independent at runtime. If one is missing/corrupt, fill
+      // only that planning domain instead of touching routine history.
+      const planning = readPlanning();
+      if (kv.get(K.planningWorkstreams) === null) kv.set(K.planningWorkstreams, JSON.stringify(planning.workstreams));
+      if (kv.get(K.planningCapacity) === null) kv.set(K.planningCapacity, JSON.stringify(planning.capacityProfiles));
+      if (kv.get(K.planningWeeks) === null) kv.set(K.planningWeeks, JSON.stringify(planning.weekPlans));
+      if (kv.get(K.planningActions) === null) kv.set(K.planningActions, JSON.stringify(planning.plannedActions));
+      if (kv.get(K.jobApplications) === null) kv.set(K.jobApplications, JSON.stringify(planning.jobApplications));
       // The index is a cache; the day keys are the truth. Rebuild if they diverge.
       const scanned = scanDayKeys();
       const indexed = readIndex();
@@ -270,6 +331,79 @@ export const createLocalStore = (kv: KV): Store => {
       notify();
     },
 
+    getWorkstreams() {
+      return readPlanning().workstreams;
+    },
+
+    upsertWorkstream(workstream) {
+      if (!workstream.id.trim()) throw new Error('Workstream needs an id.');
+      const planning = readPlanning();
+      planning.workstreams[workstream.id] = structuredClone(workstream);
+      kv.set(K.planningWorkstreams, JSON.stringify(planning.workstreams));
+      notify();
+      return structuredClone(workstream);
+    },
+
+    getCapacityProfiles() {
+      return readPlanning().capacityProfiles;
+    },
+
+    setCapacityProfiles(profiles) {
+      const weekdays = new Set<number>();
+      const next = [...profiles]
+        .map((profile) => ({ ...profile, focusBlocks: Math.max(0, Math.floor(profile.focusBlocks)) }))
+        .filter((profile) => Number.isInteger(profile.weekday) && profile.weekday >= 0 && profile.weekday <= 6)
+        .filter((profile) => {
+          if (weekdays.has(profile.weekday)) return false;
+          weekdays.add(profile.weekday);
+          return true;
+        })
+        .sort((a, b) => a.weekday - b.weekday);
+      if (next.length !== 7) throw new Error('Capacity profile needs one entry for each weekday.');
+      kv.set(K.planningCapacity, JSON.stringify(next));
+      notify();
+      return structuredClone(next);
+    },
+
+    getWeekPlans() {
+      return readPlanning().weekPlans;
+    },
+
+    upsertWeekPlan(plan) {
+      if (!plan.id.trim()) throw new Error('Week Plan needs an id.');
+      const planning = readPlanning();
+      planning.weekPlans[plan.id] = structuredClone(plan);
+      kv.set(K.planningWeeks, JSON.stringify(planning.weekPlans));
+      notify();
+      return structuredClone(plan);
+    },
+
+    getPlannedActions() {
+      return readPlanning().plannedActions;
+    },
+
+    upsertPlannedAction(action) {
+      if (!action.id.trim()) throw new Error('Planned Action needs an id.');
+      const planning = readPlanning();
+      planning.plannedActions[action.id] = structuredClone(action);
+      kv.set(K.planningActions, JSON.stringify(planning.plannedActions));
+      notify();
+      return structuredClone(action);
+    },
+
+    getJobApplications() {
+      return readPlanning().jobApplications;
+    },
+
+    upsertJobApplication(application) {
+      if (!application.id.trim()) throw new Error('Job Application needs an id.');
+      const planning = readPlanning();
+      planning.jobApplications[application.id] = structuredClone(application);
+      kv.set(K.jobApplications, JSON.stringify(planning.jobApplications));
+      notify();
+      return structuredClone(application);
+    },
+
     getSettings() {
       return { ...DEFAULT_SETTINGS, ...readMeta().settings };
     },
@@ -310,6 +444,9 @@ export const createLocalStore = (kv: KV): Store => {
           unchanged,
           templates: root.templates.length,
           learningCompleted: Object.keys(root.learningProgress ?? {}).length,
+          workstreams: Object.keys(root.planning?.workstreams ?? {}).length,
+          plannedActions: Object.keys(root.planning?.plannedActions ?? {}).length,
+          jobApplications: Object.keys(root.planning?.jobApplications ?? {}).length,
         },
       };
     },

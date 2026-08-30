@@ -60,8 +60,8 @@ describe('migrate v1 -> v2', () => {
   });
 });
 
-describe('migrate v3 -> v4 learning progress', () => {
-  it('adds empty learning progress without changing existing routine data', () => {
+describe('migrate v3 through current schema', () => {
+  it('adds learning + planning state without changing existing routine data', () => {
     const v3 = {
       schemaVersion: 3,
       settings: { timezone: 'Asia/Bangkok', dayCutoffHour: 4, weekStartsOn: 1, lastExportAt: null },
@@ -74,6 +74,34 @@ describe('migrate v3 -> v4 learning progress', () => {
     expect(out.learningProgress).toEqual({});
     expect((out.days as any)['2026-08-24'].marker).toBe('keep-me');
     expect(out.habits[0]?.id).toBe('gym');
+    expect(out.planning.workstreams).toEqual({});
+    expect(out.planning.capacityProfiles).toHaveLength(7);
+    expect(out.planning.weekPlans).toEqual({});
+    expect(out.planning.plannedActions).toEqual({});
+    expect(out.planning.jobApplications).toEqual({});
+  });
+});
+
+describe('migrate v4 -> v5 planning', () => {
+  it('is additive and preserves all v4 data', () => {
+    const v4 = {
+      schemaVersion: 4,
+      settings: { timezone: 'Asia/Bangkok', dayCutoffHour: 4, weekStartsOn: 1, lastExportAt: null },
+      habits: [{ id: 'jobsearch', label: 'Job search', color: 'violet' }],
+      templates: [{ version: 7, effectiveFrom: '2026-08-01', createdAt: '2026-08-01T00:00:00.000Z', days: {} }],
+      days: { '2026-08-24': { marker: 'history-must-survive' } },
+      learningProgress: { lesson: { lessonId: 'lesson', completedAt: '2026-08-20T00:00:00.000Z' } },
+    };
+
+    const out = migrate(structuredClone(v4));
+    expect(out.schemaVersion).toBe(5);
+    expect(out.settings).toEqual(v4.settings);
+    expect(out.habits).toEqual(v4.habits);
+    expect(out.templates).toEqual(v4.templates);
+    expect(out.days).toEqual(v4.days);
+    expect(out.learningProgress).toEqual(v4.learningProgress);
+    expect(out.planning.workstreams).toEqual({});
+    expect(out.planning.capacityProfiles.map((profile) => profile.focusBlocks)).toEqual([3, 2, 2, 1, 2, 1, 3]);
   });
 });
 

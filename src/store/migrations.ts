@@ -5,12 +5,13 @@
  * the pre-migration blob is kept under backup:preMigration:v{n} before saving.
  */
 
+import { normalizePlanningData } from '../config/planning';
 import { DEFAULT_HABITS, DEFAULT_SCHEDULE, DEFAULT_SETTINGS } from '../config/schedule';
 import { resolveTask } from '../lib/day';
 import { isDateKey, parseKey } from '../lib/date';
 import type { DayRecord, DayTask, Habit, RootData, TemplateVersion, WeekTemplate } from '../types';
 
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 5;
 
 type Migration = (data: any) => any;
 
@@ -113,12 +114,23 @@ const v3_to_v4: Migration = (data) => ({
   ...data,
   schemaVersion: 4,
   learningProgress: data?.learningProgress ?? {},
+});
+
+/**
+ * v5 — add private Planning Layer state. This is additive only: day snapshots,
+ * habits, templates and learning progress pass through byte-equivalent.
+ */
+const v4_to_v5: Migration = (data) => ({
+  ...data,
+  schemaVersion: 5,
+  planning: normalizePlanningData(data?.planning),
 }) satisfies RootData;
 
 const MIGRATIONS: Record<number, Migration> = {
   1: v1_to_v2,
   2: v2_to_v3,
   3: v3_to_v4,
+  4: v4_to_v5,
 };
 
 export const needsMigration = (data: { schemaVersion?: number }): boolean =>
