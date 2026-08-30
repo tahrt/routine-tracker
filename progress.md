@@ -61,12 +61,13 @@ Current status as of 2026-08-30:
   - PWA regression is included and passing
   - V4 → V5 migration + planning export/import round-trip are covered
   - README updated for Planning + Application Tracker
-- Branch is currently ahead of `origin/main` by the local Planning V1 commits.
-- Nothing has been pushed or deployed for Planning V1 yet.
+- Planning V1 source commits were pushed to `origin/main` on 2026-08-30.
+- `npm run deploy` completed successfully and published `dist/` to the `gh-pages` branch from source commit `1ed7309`.
+- deployed service-worker build: `1ed73093bfc5-20260830121929`
 
 Remaining release gate:
 
-> Manual installed-PWA / iPhone-size smoke check, then explicit approval to push + deploy through the existing Safe Update flow.
+> Open the existing installed Routine icon on iPhone, accept **Update now** when offered, then smoke-test Planning / Week / Application Tracker with existing local data. Do **not** delete/re-add the Home Screen app.
 
 ## Current released state
 
