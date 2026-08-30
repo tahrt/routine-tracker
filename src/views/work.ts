@@ -156,6 +156,7 @@ export const renderWorkHome = ({
         <button type="button" class="btn btn--tiny" data-action="open-planner">Plan week</button>
       </header>
 
+      <div class="work-week-label">WEEK OF ${esc(deadlineLabel(weekSummary.startsOn).toUpperCase())}</div>
       <section class="work-week-summary">
         <div><strong>${weekSummary.plannedBlocks}/${weekSummary.capacityBlocks}</strong><span>blocks scheduled</span></div>
         <div><strong>${weekSummary.completedBlocks}</strong><span>blocks done</span></div>

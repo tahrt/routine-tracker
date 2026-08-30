@@ -93,6 +93,19 @@ export const weekPlanForDate = (
   return Object.values(plans).find((plan) => plan.startsOn === monday);
 };
 
+export const planningAnchorForWork = (
+  dateK: string,
+  plans: Readonly<Record<string, WeekPlan>>,
+): string => {
+  if (weekPlanForDate(dateK, plans)) return dateK;
+
+  const next = Object.values(plans)
+    .filter((plan) => plan.startsOn > dateK)
+    .sort((a, b) => a.startsOn.localeCompare(b.startsOn))[0];
+
+  return next?.startsOn ?? dateK;
+};
+
 const deadlineUrgency = (due: string | null, dateK: string): number => {
   if (!due) return 0;
   if (due < dateK) return 100;

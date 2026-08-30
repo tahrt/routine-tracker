@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   capacityForDate,
+  planningAnchorForWork,
   selectTodayPlan,
   weekPlanForDate,
   weekPlanningSummary,
@@ -220,6 +221,14 @@ describe('week planning', () => {
 
   it('finds a Week Plan by Monday boundary', () => {
     expect(weekPlanForDate('2026-09-03', { week: plan })?.id).toBe('2026-W36');
+  });
+
+  it('uses the next Week Plan on a Sunday with no current plan', () => {
+    expect(planningAnchorForWork('2026-08-30', { week: plan })).toBe('2026-08-31');
+  });
+
+  it('keeps the current week when a Week Plan already exists', () => {
+    expect(planningAnchorForWork('2026-09-03', { week: plan })).toBe('2026-09-03');
   });
 
   it('does not count deferred actions as still scheduled', () => {

@@ -8,7 +8,7 @@
 import { LEARNING_PATHS } from './config/learning';
 import { addDays, dateKey, isFutureKey, parseKey, todayKey as computeTodayKey, weekKeys } from './lib/date';
 import { currentTemplate, isOutOfSync, materializeDay, newTaskId, syncRecordToTemplate } from './lib/day';
-import { selectTodayPlan, weekPlanForDate, weekPlanningSummary } from './lib/planning';
+import { planningAnchorForWork, selectTodayPlan, weekPlanForDate, weekPlanningSummary } from './lib/planning';
 import { toggleTask } from './lib/stats';
 import { getStore, storageIsEphemeral } from './store';
 import type {
@@ -115,6 +115,11 @@ export const startApp = (): (() => void) => {
     return out;
   };
 
+  const scrollTop = (): void => {
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  };
+
   /* -------------------------------------------------------------------- nudge */
 
   const shouldNudgeBackup = (): boolean => {
@@ -170,8 +175,9 @@ export const startApp = (): (() => void) => {
         : '<p class="empty">Learning path not found.</p>';
     } else if (state.workstreamOpenId) {
       const workstream = store.getWorkstreams()[state.workstreamOpenId];
+      const detailAnchor = planningAnchorForWork(t, store.getWeekPlans());
       const detailWeekSummary = weekPlanningSummary({
-        dateK: t,
+        dateK: detailAnchor,
         capacityProfiles: store.getCapacityProfiles(),
         weekPlans: store.getWeekPlans(),
         plannedActions: store.getPlannedActions(),
@@ -275,11 +281,12 @@ export const startApp = (): (() => void) => {
                 isOutOfSync(store.getDay(t) as DayRecord, currentTemplate(templates, t)),
             });
     } else if (state.tab === 'work') {
-      const workWeekPlan = weekPlanForDate(t, store.getWeekPlans());
+      const workAnchor = planningAnchorForWork(t, store.getWeekPlans());
+      const workWeekPlan = weekPlanForDate(workAnchor, store.getWeekPlans());
       body = renderWorkHome({
         workstreams: store.getWorkstreams(),
         weekSummary: weekPlanningSummary({
-          dateK: t,
+          dateK: workAnchor,
           capacityProfiles: store.getCapacityProfiles(),
           weekPlans: store.getWeekPlans(),
           plannedActions: store.getPlannedActions(),
@@ -366,6 +373,7 @@ export const startApp = (): (() => void) => {
       state.weekAnchor = today();
     }
     render();
+    scrollTop();
   };
 
   const activeDayKey = (): string => state.openDay ?? today();
@@ -423,6 +431,7 @@ export const startApp = (): (() => void) => {
       state.openDay = null;
       state.editing = null;
       render();
+      scrollTop();
     },
 
     'close-planner': () => {
@@ -441,6 +450,7 @@ export const startApp = (): (() => void) => {
       state.openDay = null;
       state.editing = null;
       render();
+      scrollTop();
     },
 
     'close-applications': () => {
@@ -464,6 +474,7 @@ export const startApp = (): (() => void) => {
       state.openDay = null;
       state.editing = null;
       render();
+      scrollTop();
     },
 
     'close-workstream': () => {
@@ -477,6 +488,7 @@ export const startApp = (): (() => void) => {
         state.todayMode = state.workstreamReturn;
       }
       render();
+      scrollTop();
     },
 
     back: () => {
@@ -509,6 +521,7 @@ export const startApp = (): (() => void) => {
       state.applicationsOpen = false;
       state.openDay = null;
       render();
+      scrollTop();
     },
 
     'open-learning-hub': () => {
@@ -525,6 +538,7 @@ export const startApp = (): (() => void) => {
         state.learningPathId = LEARNING_PATHS[0]?.id ?? null;
       }
       render();
+      scrollTop();
     },
 
     'learning-back': () => {
@@ -536,6 +550,7 @@ export const startApp = (): (() => void) => {
       }
       state.learningReturnWorkstreamId = null;
       render();
+      scrollTop();
     },
 
     'toggle-learning-lesson': (el) => {

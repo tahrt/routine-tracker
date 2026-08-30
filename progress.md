@@ -45,6 +45,20 @@ V2.2.1 release result:
 - deployed service-worker build: `1ca700859d95-20260830142506`
 - published successfully to `gh-pages`
 
+V2.2.2 iPhone follow-up:
+
+- Work now uses the **nearest upcoming Week Plan** when the current week has none; on Sunday 30 Aug it surfaces the 31 Aug–6 Sep plan instead of showing misleading 0/14 + “No weekly target”
+- Work shows the active plan as **WEEK OF ...**
+- all date inputs get global iPhone-safe sizing: `min-width: 0`, `max-width: 100%`, and constrained WebKit date internals
+- page-level navigation resets scroll to the top so Job Search / Pipeline headers do not reopen underneath the Dynamic Island
+- added planning tests for current-week vs next-week anchor behavior
+- no schema/data changes
+
+Latest verification:
+
+- `npm test` — **10/10 files, 153/153 tests passed**
+- `npm run build` — TypeScript + Vite + service-worker build passed
+
 
 Current status as of 2026-08-30:
 
