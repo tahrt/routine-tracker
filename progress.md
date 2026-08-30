@@ -67,6 +67,17 @@ V2.2.2 release result:
 - published successfully to `gh-pages`
 - schema remains v5; no re-import needed
 
+Final iPhone date-field fix:
+
+- native iOS date controls still escaped two-column forms in the real installed PWA
+- all date/time inputs now use strict inline-size containment
+- any narrow form group containing a date/datetime field collapses to one column on iPhone
+- Application Pipeline Stage + Due therefore stack vertically on narrow screens instead of forcing the native date control outside the card
+- the fix is global, covering application dates, deadlines, replan dates, and other date fields
+- no schema/storage/data changes
+- verification: `npm test` — **10/10 files, 153/153 tests passed**
+- verification: `npm run build` — TypeScript + Vite + service-worker build passed
+
 
 Current status as of 2026-08-30:
 

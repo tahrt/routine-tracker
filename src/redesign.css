@@ -3364,3 +3364,40 @@ input[type="date"]::-webkit-datetime-edit {
     font-size: 16px;
   }
 }
+
+
+/* ----------------------------------------------- final iPhone date-field containment */
+
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"] {
+  inline-size: 100%;
+  min-inline-size: 0 !important;
+  max-inline-size: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.planner-form-grid > label:has(input[type="date"]),
+.planner-form-grid > label:has(input[type="datetime-local"]),
+.application-row__quickedit > label:has(input[type="date"]),
+.application-row__quickedit > label:has(input[type="datetime-local"]) {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+@media (max-width: 520px) {
+  /* iOS native date controls keep a large intrinsic width in multi-column grids.
+     Put date-bearing form groups on one column so the control never escapes its card. */
+  .planner-form-grid:has(input[type="date"]),
+  .planner-form-grid:has(input[type="datetime-local"]),
+  .application-row__quickedit {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .planner-replan {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

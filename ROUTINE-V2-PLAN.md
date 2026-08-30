@@ -217,7 +217,26 @@ Simplicity rule:
 
 ## Status
 
-V2.1 is implemented and deployed. V2.2 is implemented, verified, pushed, and deployed.
+V2.1 and V2.2 are implemented and deployed.
+
+### Final iPhone polish — 2026-08-30
+
+The last remaining mobile issue was iOS native date controls escaping narrow form columns.
+
+Final rule:
+
+- date-bearing form groups stack to one column on narrow iPhones
+- date/time inputs are constrained with inline-size / min-inline-size / max-inline-size
+- parent labels clip native intrinsic overflow instead of letting the control escape its card
+- this applies globally to Planning, Workstream editing, Application Pipeline, Move/Replan, and other date fields
+- no schema or data change
+
+Verification before release:
+
+- 10/10 test files, **153/153 tests passed**
+- TypeScript + Vite + service-worker build passed
+
+V2.2 remains implemented, verified, pushed, and deployed.
 
 Release result:
 
