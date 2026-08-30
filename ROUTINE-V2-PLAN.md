@@ -201,10 +201,14 @@ Planning manager usability polish added after the first iPhone screenshot review
 - kept Application Tracker as a single quick link instead of another large form block
 - preserved all V2.1 data/storage semantics
 
-Latest verification:
+Latest verification and deployment:
 
 - 10/10 test files, 150/150 tests passed
 - production TypeScript + Vite + PWA build passed
+- usability commit: `42ae45b`
+- pushed to `origin/main`
+- deployed service-worker build: `42ae45bb2766-20260830132107`
+- published successfully to `gh-pages`
 - schema remains v5
 
 Remaining verification is the real installed-PWA smoke check on the existing iPhone Home Screen app.

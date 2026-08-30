@@ -51,10 +51,14 @@ Safety invariants preserved:
 - no new backend / sync dependency
 - existing imported Planning V1 data remains valid
 
-Latest verification after Planning Manager usability polish:
+Latest verification + deployment after Planning Manager usability polish:
 
 - `npm test` — **10/10 files, 150/150 tests passed**
 - `npm run build` — TypeScript + Vite + service-worker build passed
+- usability commit: `42ae45b`
+- pushed to `origin/main`
+- `npm run deploy` completed successfully
+- deployed service-worker build: `42ae45bb2766-20260830132107`
 - schema remains v5; no reset/re-import is required
 
 Remaining verification:
